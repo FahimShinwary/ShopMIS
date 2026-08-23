@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, Sparkles, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { printViaIframe, downloadPDFDirectly } from '../lib/pdfUtils';
+import { printViaIframe, downloadPDFDirectly, getStandardPrintCss } from '../lib/pdfUtils';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -117,70 +117,14 @@ export default function PrintPreviewModal({
           <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#0a0a0c] flex justify-center">
             <div 
               dir={isRTL ? 'rtl' : 'ltr'}
-              className="bg-white text-slate-900 w-full max-w-[850px] min-h-full p-6 sm:p-10 rounded-xl shadow-lg border border-slate-200 overflow-x-auto select-text font-sans"
+              className="bg-white text-slate-900 w-full max-w-[850px] min-h-full p-6 sm:p-10 rounded-xl shadow-lg border border-slate-200 overflow-x-auto select-text font-sans pdf-report-root"
               style={{
-                fontFamily: "'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif"
+                fontFamily: "'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif"
               }}
             >
-              <style>{`
-                .preview-doc-wrapper * {
-                  box-sizing: border-box;
-                }
-                .preview-doc-wrapper table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  margin-top: 16px;
-                  background-color: #ffffff;
-                }
-                .preview-doc-wrapper th,
-                .preview-doc-wrapper td {
-                  border: 1px solid #cbd5e1;
-                  padding: 8px 10px;
-                  font-size: 11px;
-                  line-height: 1.4;
-                  color: #0f172a;
-                  text-align: ${isRTL ? 'right' : 'left'};
-                }
-                .preview-doc-wrapper th {
-                  background-color: #f1f5f9;
-                  font-weight: 700;
-                  color: #1e293b;
-                }
-                .preview-doc-wrapper .badge-income {
-                  color: #16a34a !important;
-                  font-weight: 700;
-                }
-                .preview-doc-wrapper .badge-expense {
-                  color: #dc2626 !important;
-                  font-weight: 700;
-                }
-                .preview-doc-wrapper .summary-grid {
-                  display: grid;
-                  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-                  gap: 10px;
-                  margin-bottom: 16px;
-                }
-                .preview-doc-wrapper .summary-card {
-                  border: 1px solid #e2e8f0;
-                  background-color: #f8fafc;
-                  padding: 10px 12px;
-                  border-radius: 8px;
-                }
-                .preview-doc-wrapper .summary-card h3 {
-                  margin: 0;
-                  font-size: 11px;
-                  font-weight: 700;
-                  color: #64748b;
-                }
-                .preview-doc-wrapper .summary-card p {
-                  margin: 4px 0 0;
-                  font-size: 14px;
-                  font-weight: 800;
-                  color: #0f172a;
-                }
-              `}</style>
+              <style>{getStandardPrintCss(isRTL)}</style>
               <div 
-                className="preview-doc-wrapper"
+                className="pdf-report-root"
                 dangerouslySetInnerHTML={{ __html: contentHtml }} 
               />
             </div>

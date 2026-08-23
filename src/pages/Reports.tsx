@@ -8,7 +8,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   DollarSign, 
-  BookOpen, 
+  BookOpen,
   Users, 
   Package, 
   Filter,
@@ -33,8 +33,7 @@ import {
   isDateInRange
 } from '../lib/shamsi';
 import { RoznamchaEntry, KataTransaction, KataSummary, StockEntry, Customer, Currency } from '../types';
-import { openPrintablePDFWindow, exportToPDF, printViaIframe, downloadPDFDirectly } from '../lib/pdfUtils';
-import PrintPreviewModal from '../components/PrintPreviewModal';
+import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
 
 interface ReportsProps {
   roznamchaData: RoznamchaEntry[];
@@ -70,19 +69,6 @@ export default function Reports({
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 15;
-  const [previewModalData, setPreviewModalData] = useState<{
-    isOpen: boolean;
-    title: string;
-    filename: string;
-    contentHtml: string;
-    isRTL: boolean;
-  }>({
-    isOpen: false,
-    title: '',
-    filename: '',
-    contentHtml: '',
-    isRTL: false,
-  });
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -663,33 +649,15 @@ export default function Reports({
     };
   };
 
-  // Preview in-app modal handler
-  const handlePreviewReport = () => {
-    const reportData = buildReportHtml();
-    setPreviewModalData({
-      isOpen: true,
-      title: reportData.title,
-      filename: reportData.filename,
-      contentHtml: reportData.contentHtml,
-      isRTL: reportData.isRTL,
-    });
-  };
-
   // Print PDF Report Handler
   const handlePrintReport = () => {
-    const reportData = buildReportHtml();
-    printViaIframe(reportData.contentHtml, reportData.title, reportData.isRTL);
+    openPrintablePDFWindow(buildReportHtml());
   };
 
   // Direct Download PDF Handler
   const handleDownloadPDF = () => {
     const reportData = buildReportHtml();
-    downloadPDFDirectly({
-      title: reportData.title,
-      filename: reportData.filename,
-      contentHtml: reportData.contentHtml,
-      isRTL: reportData.isRTL,
-    });
+    exportToPDF(reportData.contentHtml, reportData.filename, reportData.title, reportData.isRTL);
   };
 
   // Export JSON handler
@@ -731,17 +699,6 @@ export default function Reports({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handlePreviewReport}
-            id="btn-preview-report"
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-sm font-bold border border-border shadow-sm transition-all cursor-pointer"
-          >
-            <BookOpen size={16} />
-            <span>{t.preview || 'Preview'}</span>
-          </motion.button>
-
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -1580,16 +1537,6 @@ export default function Reports({
           </div>
         )}
       </div>
-
-      {/* In-App PDF & Print Preview Modal */}
-      <PrintPreviewModal
-        isOpen={previewModalData.isOpen}
-        onClose={() => setPreviewModalData(prev => ({ ...prev, isOpen: false }))}
-        title={previewModalData.title}
-        filename={previewModalData.filename}
-        contentHtml={previewModalData.contentHtml}
-        isRTL={previewModalData.isRTL}
-      />
     </div>
   );
 }

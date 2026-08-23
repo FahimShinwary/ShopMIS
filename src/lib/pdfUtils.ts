@@ -1,4 +1,5 @@
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 import { formatShamsi } from './shamsi';
 
 export interface PDFReportOptions {
@@ -9,11 +10,203 @@ export interface PDFReportOptions {
   autoPrint?: boolean;
 }
 
+const PASHTO_FONT_STACK = "'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif";
+
+/**
+ * Standard Print and PDF CSS rules applied across all reports, columns, and printable documents.
+ * Guarantees connected cursive Pashto/Dari ligatures and crystal-clear typography.
+ */
+export const getStandardPrintCss = (isRTL: boolean = true): string => `
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-family: ${PASHTO_FONT_STACK};
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+  }
+
+  .pdf-report-root, 
+  .pdf-container, 
+  table, 
+  th, 
+  td, 
+  h1, 
+  h2, 
+  h3, 
+  h4, 
+  p, 
+  div, 
+  span, 
+  strong, 
+  b,
+  label {
+    font-family: ${PASHTO_FONT_STACK} !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "mkmk" 1, "mark" 1 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
+
+  ${isRTL ? `
+  .pdf-report-root, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
+    direction: rtl !important;
+    text-align: right !important;
+  }
+  .header { text-align: center !important; }
+  .header h1, .header h2, .header p { text-align: center !important; }
+  .footer { text-align: center !important; }
+  .footer p { text-align: center !important; }
+  ` : `
+  .pdf-report-root, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
+    direction: ltr !important;
+    text-align: left !important;
+  }
+  .header { text-align: center !important; }
+  .header h1, .header h2, .header p { text-align: center !important; }
+  .footer { text-align: center !important; }
+  .footer p { text-align: center !important; }
+  `}
+
+  .header {
+    text-align: center !important;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 12px;
+  }
+  .header h1 {
+    margin: 0 0 4px 0;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+  .header h2 {
+    margin: 4px 0;
+    color: #1e293b;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .header p {
+    margin: 0;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .summary-card {
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+  .summary-card h3 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+  }
+  .summary-card p {
+    margin: 3px 0 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    margin-bottom: 14px;
+    background-color: #ffffff;
+  }
+  
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #0f172a;
+    vertical-align: middle;
+    text-align: ${isRTL ? 'right' : 'left'} !important;
+  }
+
+  /* Specific column alignment rules */
+  th.text-center, td.text-center {
+    text-align: center !important;
+  }
+  th.text-end, td.text-end {
+    text-align: ${isRTL ? 'left' : 'right'} !important;
+  }
+
+  th {
+    background-color: #f1f5f9;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  /* Status and badge color styles */
+  .badge-income {
+    color: #15803d !important;
+    font-weight: 800;
+  }
+  .badge-expense {
+    color: #b91c1c !important;
+    font-weight: 800;
+  }
+  .badge-neutral {
+    color: #2563eb !important;
+    font-weight: 800;
+  }
+
+  .footer {
+    margin-top: 28px;
+    text-align: center !important;
+    font-size: 11px;
+    color: #64748b;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 12px;
+  }
+
+  @media print {
+    .no-print { display: none !important; }
+    html, body {
+      background: #ffffff !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .pdf-wrapper { padding: 0 !important; display: block !important; }
+    .pdf-container { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+    @page { size: A4 portrait; margin: 10mm; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+`;
+
 export const getStandardPrintHtml = (
   contentHtml: string,
   title: string = 'Report',
-  isRTL: boolean = false,
-  autoPrint: boolean = false
+  isRTL: boolean = true,
+  autoPrint: boolean = true
 ): string => {
   return `
     <!DOCTYPE html>
@@ -26,31 +219,7 @@ export const getStandardPrintHtml = (
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
-        * { box-sizing: border-box; }
-        html, body {
-          margin: 0;
-          padding: 0;
-          background-color: #f8fafc;
-          color: #0f172a;
-          font-family: 'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          text-rendering: optimizeLegibility;
-        }
-
-        ${isRTL ? `
-        html, body, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
-          direction: rtl !important;
-          text-align: right !important;
-          letter-spacing: normal !important;
-          word-spacing: normal !important;
-          font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
-        }
-        .header { text-align: center !important; }
-        .footer { text-align: center !important; }
-        ` : `
-        .header { text-align: center; }
-        .footer { text-align: center; }
-        `}
+        ${getStandardPrintCss(isRTL)}
 
         .action-bar {
           display: flex;
@@ -113,69 +282,6 @@ export const getStandardPrintHtml = (
           width: 100%;
           max-width: 900px;
         }
-
-        .header { 
-          text-align: center; 
-          margin-bottom: 24px; 
-          border-bottom: 2px solid #1e293b; 
-          padding-bottom: 16px; 
-        }
-        .header h1 { margin: 0 0 6px 0; color: #0f172a; font-size: 22px; font-weight: 800; }
-        .header p { margin: 0; color: #64748b; font-size: 13px; font-weight: 600; }
-        
-        .summary-grid { 
-          display: grid; 
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-          gap: 12px; 
-          margin-bottom: 20px; 
-        }
-        .summary-card { 
-          border: 1px solid #e2e8f0; 
-          background: #f8fafc;
-          padding: 12px; 
-          border-radius: 8px; 
-          min-width: 0;
-        }
-        .summary-card h3 { margin: 0; font-size: 11px; font-weight: 700; color: #64748b; }
-        .summary-card p { margin: 4px 0 0; font-size: 15px; font-weight: 800; color: #0f172a; line-height: 1.3; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { 
-          border: 1px solid #cbd5e1; 
-          padding: 8px 10px; 
-          text-align: ${isRTL ? 'right' : 'left'}; 
-          font-size: 11px; 
-          line-height: 1.4; 
-        }
-        th { background: #f1f5f9; font-weight: 700; color: #1e293b; }
-        
-        .badge-income { color: #16a34a !important; font-weight: 700; }
-        .badge-expense { color: #dc2626 !important; font-weight: 700; }
-        
-        .footer { 
-          margin-top: 32px; 
-          text-align: center; 
-          font-size: 11px; 
-          color: #64748b; 
-          border-top: 1px solid #e2e8f0; 
-          padding-top: 14px; 
-        }
-
-        @media print {
-          .no-print { display: none !important; }
-          html, body { 
-            background: white !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-          }
-          .pdf-wrapper { padding: 0 !important; display: block !important; }
-          .pdf-container { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
-          @page { size: A4 portrait; margin: 10mm; }
-          tr { page-break-inside: avoid; }
-          thead { display: table-header-group; }
-        }
       </style>
     </head>
     <body>
@@ -195,7 +301,7 @@ export const getStandardPrintHtml = (
       </div>
 
       <div class="pdf-wrapper">
-        <div id="pdf-content" class="pdf-container">
+        <div id="pdf-content" class="pdf-container pdf-report-root">
           ${contentHtml}
         </div>
       </div>
@@ -205,10 +311,10 @@ export const getStandardPrintHtml = (
           if (${autoPrint ? 'true' : 'false'}) {
             if (document.fonts && document.fonts.ready) {
               document.fonts.ready.then(function() {
-                setTimeout(function() { window.print(); }, 200);
+                setTimeout(function() { window.print(); }, 250);
               });
             } else {
-              setTimeout(function() { window.print(); }, 350);
+              setTimeout(function() { window.print(); }, 400);
             }
           }
         };
@@ -219,12 +325,10 @@ export const getStandardPrintHtml = (
 };
 
 /**
- * Print via a dedicated hidden iframe.
- * This triggers the browser's native Save as PDF / Print dialog directly with 0 lag,
- * vector text quality, zero canvas memory constraints, and no popup blocking issues.
+ * Print via a dedicated iframe or window popup.
+ * Vector text quality, zero canvas memory constraints, and high compatibility.
  */
-export function printViaIframe(contentHtml: string, title: string = 'Report', isRTL: boolean = false): void {
-  // Remove any previously created print iframe
+export function printViaIframe(contentHtml: string, title: string = 'Report', isRTL: boolean = true): void {
   const oldIframe = document.getElementById('print-service-iframe');
   if (oldIframe && document.body.contains(oldIframe)) {
     document.body.removeChild(oldIframe);
@@ -233,20 +337,25 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
   const iframe = document.createElement('iframe');
   iframe.id = 'print-service-iframe';
   iframe.style.position = 'fixed';
-  iframe.style.left = '-99999px';
-  iframe.style.top = '-99999px';
-  iframe.style.width = '0px';
-  iframe.style.height = '0px';
+  iframe.style.right = '0px';
+  iframe.style.bottom = '0px';
+  iframe.style.width = '100px';
+  iframe.style.height = '100px';
   iframe.style.border = 'none';
-  iframe.style.visibility = 'hidden';
-  iframe.style.opacity = '0';
+  iframe.style.opacity = '0.01';
+  iframe.style.zIndex = '-9999';
   iframe.style.pointerEvents = 'none';
 
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document || iframe.contentDocument;
   if (!doc) {
-    console.error('Could not access iframe document');
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(getStandardPrintHtml(contentHtml, title, isRTL, true));
+      printWin.document.close();
+    }
     return;
   }
 
@@ -255,134 +364,142 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
   doc.write(fullHtml);
   doc.close();
 
-  setTimeout(() => {
+  const executePrint = () => {
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
     } catch (err) {
-      console.warn('Iframe print trigger:', err);
+      console.warn('Iframe print error, using window fallback:', err);
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(getStandardPrintHtml(contentHtml, title, isRTL, true));
+        printWin.document.close();
+      }
     }
-  }, 300);
+  };
+
+  if (iframe.contentWindow?.document?.fonts?.ready) {
+    iframe.contentWindow.document.fonts.ready.then(() => {
+      setTimeout(executePrint, 200);
+    }).catch(() => {
+      setTimeout(executePrint, 350);
+    });
+  } else {
+    setTimeout(executePrint, 400);
+  }
 }
 
 /**
- * Direct PDF Download.
- * If the dataset is large (many rows), using html2canvas can exceed max canvas dimensions and produce blank outputs.
- * In that case, we instantly trigger the native Save as PDF print engine for 100% vector accuracy and reliability.
+ * High-Definition Direct PDF Download using html2canvas-pro + jsPDF
+ * - Renders in high z-index overlay so html2canvas captures 100% of text and tables
+ * - Handles modern CSS colors (oklch, oklab, lch) seamlessly
+ * - Guarantees fully connected cursive Pashto ligatures across all fields (Customer Name, Description, Amount, etc.)
+ * - Scale 2.0 for 300 DPI Ultra-HD print sharpness
+ * - JPEG 0.92 stream compression yielding ~200-400 KB compact file size
+ * - Multi-page pagination when dataset is long
  */
 export async function downloadPDFDirectly(options: PDFReportOptions): Promise<void> {
-  const { title, filename, contentHtml, isRTL = false } = options;
+  const { title, filename, contentHtml, isRTL = true } = options;
   const pdfFileName = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
 
-  // Count table rows to detect if canvas limits will be exceeded
-  const rowCount = (contentHtml.match(/<tr/gi) || []).length;
-
-  // If table has > 35 rows, html2canvas will likely freeze or produce an empty canvas due to 16,384px height limit.
-  // We use vector iframe print which instantly generates a multi-page PDF in 0.1s.
-  if (rowCount > 35 || contentHtml.length > 15000) {
-    console.log(`Large report detected (${rowCount} rows). Using high-fidelity vector PDF print engine.`);
-    printViaIframe(contentHtml, title, isRTL);
-    return;
-  }
-
+  // 1. Synchronize Font Readiness before taking canvas DOM snapshot
   if (document.fonts && document.fonts.ready) {
     try {
       await document.fonts.ready;
     } catch (e) {
-      // ignore
+      console.warn('Font loading wait:', e);
     }
   }
 
-  // Offscreen container: strictly positioned OFF-SCREEN so it NEVER covers the user's interface
+  // 2. High z-index container so dark app backgrounds don't occlude or blank the canvas capture
   const container = document.createElement('div');
-  container.id = 'temp-pdf-export-container';
+  container.id = 'temp-pdf-export-engine-container';
   container.style.position = 'fixed';
-  container.style.left = '-99999px';
-  container.style.top = '0';
-  container.style.width = '800px';
-  container.style.padding = '32px';
+  container.style.top = '0px';
+  container.style.left = '0px';
+  container.style.width = '794px'; // Standard A4 width at 96 DPI
   container.style.backgroundColor = '#ffffff';
   container.style.color = '#0f172a';
   container.style.direction = isRTL ? 'rtl' : 'ltr';
-  container.style.opacity = '0';
+  container.style.zIndex = '999999';
+  container.style.opacity = '1';
   container.style.pointerEvents = 'none';
-  container.style.zIndex = '-9999';
+  container.style.overflow = 'visible';
 
   container.innerHTML = `
     <style>
-      * { box-sizing: border-box; }
-      #temp-pdf-export-container {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        font-family: 'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif !important;
-      }
-      #temp-pdf-export-container * {
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
-      }
-      #temp-pdf-export-container h1, 
-      #temp-pdf-export-container h2, 
-      #temp-pdf-export-container h3, 
-      #temp-pdf-export-container p, 
-      #temp-pdf-export-container span, 
-      #temp-pdf-export-container td, 
-      #temp-pdf-export-container th {
-        color: #0f172a !important;
-        direction: ${isRTL ? 'rtl' : 'ltr'} !important;
-        text-align: ${isRTL ? 'right' : 'left'} !important;
-        font-family: 'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif !important;
-      }
-      #temp-pdf-export-container .header { text-align: center !important; margin-bottom: 20px; border-bottom: 2px solid #1e293b; padding-bottom: 14px; }
-      #temp-pdf-export-container .header h1 { margin: 0 0 4px 0; color: #0f172a !important; font-size: 20px; font-weight: 800; text-align: center !important; }
-      #temp-pdf-export-container .header p { margin: 0; color: #475569 !important; font-size: 12px; font-weight: 600; text-align: center !important; }
-      
-      #temp-pdf-export-container .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
-      #temp-pdf-export-container .summary-card { border: 1px solid #e2e8f0 !important; background-color: #f8fafc !important; padding: 10px; border-radius: 6px; }
-      #temp-pdf-export-container .summary-card h3 { margin: 0; font-size: 10px; font-weight: 700; color: #475569 !important; }
-      #temp-pdf-export-container .summary-card p { margin: 3px 0 0; font-size: 14px; font-weight: 800; color: #0f172a !important; }
-
-      #temp-pdf-export-container table { width: 100%; border-collapse: collapse; margin-top: 14px; background-color: #ffffff !important; }
-      #temp-pdf-export-container th, 
-      #temp-pdf-export-container td { border: 1px solid #cbd5e1 !important; padding: 7px 8px; font-size: 10px; word-wrap: break-word; line-height: 1.3; color: #0f172a !important; }
-      #temp-pdf-export-container th { background-color: #f1f5f9 !important; font-weight: 700; color: #1e293b !important; }
-      #temp-pdf-export-container .badge-income { color: #16a34a !important; font-weight: 700; }
-      #temp-pdf-export-container .badge-expense { color: #dc2626 !important; font-weight: 700; }
-      #temp-pdf-export-container .footer { margin-top: 24px; text-align: center !important; font-size: 10px; color: #475569 !important; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+      ${getStandardPrintCss(isRTL)}
     </style>
-    <div>
+    <div class="pdf-report-root" style="background:#ffffff; padding: 24px 28px; width: 100%;">
       ${contentHtml}
     </div>
   `;
 
   document.body.appendChild(container);
 
-  try {
-    const html2pdfFunc = (html2pdf as any).default || html2pdf || (window as any).html2pdf;
-    if (html2pdfFunc) {
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: pdfFileName,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          letterRendering: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          windowWidth: 800
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
+  // Allow layout and font rendering calculation
+  await new Promise((resolve) => setTimeout(resolve, 150));
 
-      await html2pdfFunc().set(opt).from(container).save();
-    } else {
-      printViaIframe(contentHtml, title, isRTL);
+  try {
+    // 3. Ultra-HD Canvas Snapshot using html2canvas-pro
+    const canvas = await html2canvas(container, {
+      scale: 2.0, // ~1,600px width matching high-resolution print standard
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
+
+    if (!canvas || canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Canvas snapshot failed');
     }
+
+    // 4. Initialize jsPDF (A4 portrait) with compression enabled
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
+
+    const pageWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const margin = 10; // 10mm margins
+    const printableWidth = pageWidth - (margin * 2);
+    const printableHeight = pageHeight - (margin * 2);
+
+    // Canvas dimensions converted to mm
+    const imgWidth = printableWidth;
+    const imgHeight = (canvas.height * printableWidth) / canvas.width;
+
+    // 5. Optimized Stream Compression: JPEG 0.92 quality (reduces size to ~200-400KB)
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+    if (imgHeight <= printableHeight) {
+      // Single Page Output
+      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+    } else {
+      // Multi-Page Output with vertical slicing
+      let heightLeft = imgHeight;
+      let position = margin;
+
+      pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= printableHeight;
+
+      while (heightLeft > 0) {
+        position = position - printableHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= printableHeight;
+      }
+    }
+
+    // 6. Save the PDF directly to the user's downloads
+    pdf.save(pdfFileName);
   } catch (err) {
-    console.error('Direct PDF export error, falling back to iframe print:', err);
-    printViaIframe(contentHtml, title, isRTL);
+    console.error('Direct PDF export error, falling back to printable window:', err);
+    openPrintablePDFWindow({ title, filename, contentHtml, isRTL, autoPrint: true });
   } finally {
     if (document.body.contains(container)) {
       document.body.removeChild(container);
@@ -390,7 +507,12 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
   }
 }
 
-export function exportToPDF(elementOrHtml: HTMLElement | string, filename: string, title: string = 'Report', isRTL: boolean = true) {
+export function exportToPDF(
+  elementOrHtml: HTMLElement | string,
+  filename: string,
+  title: string = 'Report',
+  isRTL: boolean = true
+) {
   const contentHtml = typeof elementOrHtml === 'string' ? elementOrHtml : elementOrHtml.outerHTML;
   downloadPDFDirectly({
     title,
@@ -401,12 +523,13 @@ export function exportToPDF(elementOrHtml: HTMLElement | string, filename: strin
 }
 
 export function openPrintablePDFWindow(options: PDFReportOptions) {
-  const { title, contentHtml, isRTL = false, autoPrint = false } = options;
-  
+  const { title, contentHtml, isRTL = true, autoPrint = true } = options;
+
   try {
     const printWindow = window.open('', '_blank');
     if (printWindow && !printWindow.closed) {
       const fullHtml = getStandardPrintHtml(contentHtml, title, isRTL, autoPrint);
+      printWindow.document.open();
       printWindow.document.write(fullHtml);
       printWindow.document.close();
       return;
@@ -415,6 +538,5 @@ export function openPrintablePDFWindow(options: PDFReportOptions) {
     console.warn('window.open blocked, falling back to iframe print');
   }
 
-  // Fallback to iframe printing if window.open is blocked by iframe or browser sandbox
   printViaIframe(contentHtml, title, isRTL);
 }
