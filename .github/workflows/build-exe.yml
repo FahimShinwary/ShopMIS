@@ -18,15 +18,18 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup MSVC C++ Compiler
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Configure Windows Build Tools & MSVS 2022
-        run: |
-          npm config set msvs_version 2022 --global
-        shell: bash
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
@@ -34,7 +37,7 @@ jobs:
           npm_config_msvs_version: "2022"
           GYP_MSVS_VERSION: "2022"
 
-      - name: Rebuild Native Modules for Electron 29
+      - name: Rebuild Native Modules for Electron
         run: npx electron-builder install-app-deps
         env:
           npm_config_msvs_version: "2022"
