@@ -4,6 +4,33 @@ import fs from 'fs';
 import * as crud from '../src/database/crud';
 import { dbPath, reinitDatabase, getCustomDbFolder, setCustomDbFolder, performDatabaseBackup } from '../src/database/db';
 
+const writeCrashLog = (type: string, error: any) => {
+  try {
+    const logDir = app?.getPath ? app.getPath('userData') : process.cwd();
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logFile = path.join(logDir, 'crash_report.log');
+    const timestamp = new Date().toISOString();
+    const msg = `[${timestamp}] [${type}] ${error?.stack || error?.message || error}\n`;
+    fs.appendFileSync(logFile, msg, 'utf8');
+  } catch (e) {}
+};
+
+// Handle uncaught exceptions & promise rejections
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  writeCrashLog('UncaughtException', error);
+  try {
+    dialog.showErrorBox('Critical Error', `${error?.message || 'An unexpected error occurred.'}\n\nPlease check crash_report.log in %APPDATA%\\Shop MIS`);
+  } catch (e) {}
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+  writeCrashLog('UnhandledRejection', reason);
+});
+
 const licensePath = path.join(app.getPath('userData'), 'license.json');
 
 const isValidLicenseKey = (key: string): boolean => {
@@ -35,25 +62,16 @@ const saveLicenseData = (data: any) => {
   fs.writeFileSync(licensePath, JSON.stringify(data));
 };
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  if (dialog) {
-    dialog.showErrorBox('Critical Error', error.message || 'An unexpected error occurred in the main process.');
-  }
-});
-
 let mainWindow: BrowserWindow | null = null;
-
 const isDev = !app.isPackaged;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
+  // If another instance is already running, focus it and quit this new launch
   app.quit();
 } else {
   app.on('second-instance', () => {
-    // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
@@ -64,13 +82,15 @@ if (!gotTheLock) {
     mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
+      minWidth: 900,
+      minHeight: 600,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
       },
       backgroundColor: '#0a0a0a',
-      title: 'Soft Touch Technology',
+      title: 'Shop MIS - Soft Touch Technology',
       show: false,
     });
 
