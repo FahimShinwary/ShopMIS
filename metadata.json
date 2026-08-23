@@ -1,0 +1,8 @@
+{
+  "name": "Shop-MIS-Jalalabd",
+  "description": "A professional shop management system for Roznamcha, Kata, and Stock Book with RTL support and dark mode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
