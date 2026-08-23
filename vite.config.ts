@@ -4,7 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import electron from 'vite-plugin-electron';
-import renderer from 'vite-plugin-electron-renderer';
 
 // Fix for ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +14,7 @@ export default defineConfig(({ mode }) => {
   const isCloudRun = !!(process.env.K_SERVICE || process.env.CLOUD_RUN_JOB);
 
   return {
+    base: './',
     plugins: [
       react(),
       tailwindcss(),
@@ -56,7 +56,6 @@ export default defineConfig(({ mode }) => {
             },
           },
         ]),
-        renderer(),
       ] : []),
     ],
     define: {

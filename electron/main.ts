@@ -31,7 +31,14 @@ process.on('unhandledRejection', (reason) => {
   writeCrashLog('UnhandledRejection', reason);
 });
 
-const licensePath = path.join(app.getPath('userData'), 'license.json');
+const getLicensePath = () => {
+  try {
+    const dir = app?.getPath ? app.getPath('userData') : process.cwd();
+    return path.join(dir, 'license.json');
+  } catch (e) {
+    return path.join(process.cwd(), 'license.json');
+  }
+};
 
 const isValidLicenseKey = (key: string): boolean => {
   if (!key || typeof key !== 'string') return false;
@@ -45,6 +52,7 @@ const isValidLicenseKey = (key: string): boolean => {
 };
 
 const getLicenseData = () => {
+  const licensePath = getLicensePath();
   if (fs.existsSync(licensePath)) {
     try {
       const data = JSON.parse(fs.readFileSync(licensePath, 'utf8'));
@@ -59,6 +67,7 @@ const getLicenseData = () => {
 };
 
 const saveLicenseData = (data: any) => {
+  const licensePath = getLicensePath();
   fs.writeFileSync(licensePath, JSON.stringify(data));
 };
 
@@ -80,34 +89,28 @@ if (!gotTheLock) {
 
   function createWindow() {
     mainWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
+      width: 1280,
+      height: 820,
       minWidth: 900,
       minHeight: 600,
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         nodeIntegration: false,
         contextIsolation: true,
+        sandbox: false,
       },
       backgroundColor: '#0a0a0a',
       title: 'Shop MIS - Soft Touch Technology',
-      show: false,
+      show: true,
     });
 
     mainWindow.removeMenu();
     Menu.setApplicationMenu(null);
 
-    // Fallback: Show window after 5 seconds if ready-to-show doesn't fire
-    const showTimeout = setTimeout(() => {
-      if (mainWindow && !mainWindow.isVisible()) {
-        mainWindow.show();
-      }
-    }, 5000);
-
     mainWindow.once('ready-to-show', () => {
-      clearTimeout(showTimeout);
       if (mainWindow) {
         mainWindow.show();
+        mainWindow.focus();
       }
     });
 
@@ -116,7 +119,7 @@ if (!gotTheLock) {
       if (!isDev) {
         dialog.showErrorBox(
           'Load Error',
-          `Failed to load application content: ${errorDescription} (${errorCode})`
+          `Failed to load application content: ${errorDescription} (${errorCode})\n\nLooking for: ${path.join(__dirname, '../dist/index.html')}`
         );
       }
     });
@@ -127,11 +130,13 @@ if (!gotTheLock) {
     } else {
       const indexPath = path.join(__dirname, '../dist/index.html');
       if (fs.existsSync(indexPath)) {
-        mainWindow.loadFile(indexPath);
+        mainWindow.loadFile(indexPath).catch((err) => {
+          dialog.showErrorBox('Startup Error', `Error loading index.html: ${err?.message || err}`);
+        });
       } else {
         dialog.showErrorBox(
           'Startup Error',
-          'The application assets (dist/index.html) could not be found. Please ensure the application was built correctly.'
+          `The application assets could not be found at: ${indexPath}\nPlease ensure the application was built correctly.`
         );
       }
     }
