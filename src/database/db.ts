@@ -9,15 +9,22 @@ const _require = typeof require !== 'undefined' ? require : createRequire(import
 
 // Helper to get the database path
 const getConfigPath = () => {
-  if (process.versions.electron) {
-    try {
-      const { app } = _require('electron');
-      if (app) {
-        return path.join(app.getPath('userData'), 'db_config.json');
+  try {
+    const electronModule = typeof _require !== 'undefined' ? _require('electron') : null;
+    const electronApp = electronModule?.app;
+    if (electronApp && typeof electronApp.getPath === 'function') {
+      const uData = electronApp.getPath('userData');
+      if (uData) {
+        if (!fs.existsSync(uData)) fs.mkdirSync(uData, { recursive: true });
+        return path.join(uData, 'db_config.json');
       }
-    } catch (e) {}
-  }
-  return path.join(process.cwd(), 'db_config.json');
+    }
+  } catch (e) {}
+  
+  const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library/Application Support') : '/tmp');
+  const targetDir = path.join(appData, 'Shop MIS');
+  try { if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true }); } catch (e) {}
+  return path.join(targetDir, 'db_config.json');
 };
 
 export const getCustomDbFolder = (): string => {
@@ -40,33 +47,35 @@ const getDatabasePath = () => {
   }
 
   const customFolder = getCustomDbFolder();
-  if (customFolder) {
+  if (customFolder && fs.existsSync(customFolder)) {
     return path.join(customFolder, 'shop_mis.db');
   }
 
-  const localPath = path.join(process.cwd(), 'shop_mis.db');
-  
-  if (process.env.NODE_ENV !== 'production') {
-    return localPath;
-  }
-
-  if (process.versions.electron) {
-    try {
-      const { app } = _require('electron');
-      if (app) {
-        const userDataPath = app.getPath('userData');
+  // If in Electron, use userData
+  try {
+    const electronModule = typeof _require !== 'undefined' ? _require('electron') : null;
+    const electronApp = electronModule?.app;
+    if (electronApp && typeof electronApp.getPath === 'function') {
+      const userDataPath = electronApp.getPath('userData');
+      if (userDataPath) {
+        if (!fs.existsSync(userDataPath)) {
+          fs.mkdirSync(userDataPath, { recursive: true });
+        }
         return path.join(userDataPath, 'shop_mis.db');
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
+  // Safe user AppData directory (Guaranteed writable on Windows)
   try {
-    fs.accessSync(process.cwd(), fs.constants.W_OK);
-    return localPath;
+    const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library/Application Support') : '/tmp');
+    const targetDir = path.join(appData, 'Shop MIS');
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+    return path.join(targetDir, 'shop_mis.db');
   } catch (e) {
-    return process.platform === 'win32' 
-      ? path.join(process.env.APPDATA || '.', 'shop_mis.db')
-      : '/tmp/shop_mis.db';
+    return path.join(process.cwd(), 'shop_mis.db');
   }
 };
 
@@ -95,6 +104,16 @@ const resetDatabase = () => {
 
 export const getDb = () => {
   if (!dbInstance) {
+    dbPath = getDatabasePath();
+    const parentDir = path.dirname(dbPath);
+    try {
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+    } catch (dirErr) {
+      console.warn('Could not create DB parent directory:', dirErr);
+    }
+
     try {
       console.log(`Initializing database at: ${dbPath}`);
       dbInstance = new Database(dbPath);
@@ -106,7 +125,15 @@ export const getDb = () => {
         resetDatabase();
         dbInstance = new Database(dbPath);
       } else {
-        throw error;
+        // Fallback to TEMP folder if primary location fails
+        try {
+          const fallbackPath = path.join(process.env.TEMP || '/tmp', 'shop_mis_fallback.db');
+          console.warn(`Falling back to database at: ${fallbackPath}`);
+          dbInstance = new Database(fallbackPath);
+          dbInstance.pragma('journal_mode = WAL');
+        } catch (fallbackErr) {
+          throw error;
+        }
       }
     }
 

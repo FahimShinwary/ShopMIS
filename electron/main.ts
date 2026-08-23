@@ -77,7 +77,7 @@ const isDev = !app.isPackaged;
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // If another instance is already running, focus it and quit this new launch
+  // If another instance is running, exit immediately
   app.quit();
 } else {
   app.on('second-instance', () => {
@@ -112,6 +112,11 @@ if (!gotTheLock) {
         mainWindow.show();
         mainWindow.focus();
       }
+    });
+
+    mainWindow.webContents.on('render-process-gone', (event, details) => {
+      console.error('Renderer process gone:', details);
+      writeCrashLog('RendererCrashed', JSON.stringify(details));
     });
 
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -385,10 +390,21 @@ async function checkAndRunAutoBackup() {
   }
 }
 
-// Background scheduler every 10s
-setInterval(checkAndRunAutoBackup, 10000);
+app.whenReady().then(() => {
+  try {
+    createWindow();
+    // Start background auto-backup checker
+    setInterval(checkAndRunAutoBackup, 30000);
+  } catch (error: any) {
+    dialog.showErrorBox('Initialization Error', error.message || 'Failed to create main window');
+  }
 
-// License IPC Handlers
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
 ipcMain.handle('license:status', () => {
   const licenseData = getLicenseData();
   const status = licenseData.system_license || crud.settings.get('system_license');
@@ -445,20 +461,6 @@ ipcMain.handle('license:activate', (_, rawKey) => {
     return { success: true };
   }
   return { success: false };
-});
-
-app.whenReady().then(() => {
-  try {
-    createWindow();
-  } catch (error: any) {
-    dialog.showErrorBox('Initialization Error', error.message || 'Failed to create main window');
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
 });
 
 app.on('window-all-closed', () => {
