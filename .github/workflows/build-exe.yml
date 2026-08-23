@@ -18,21 +18,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup MSVC C++ Environment
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Dependencies & Native SQLite for Electron
-        run: |
-          npm install --legacy-peer-deps
-          npx electron-builder install-app-deps
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+        env:
+          GYP_MSVS_VERSION: 2022
+
+      - name: Rebuild Native Modules for Electron 29
+        run: npx @electron/rebuild -f -w better-sqlite3 -v 29.4.0
+        env:
+          GYP_MSVS_VERSION: 2022
 
       - name: Build Web Assets & Electron Bundle
         run: npm run build
 
       - name: Package Windows EXE Installer
-        run: npx electron-builder --win --x64
+        run: npx electron-builder --win --x64 -c.npmRebuild=false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
