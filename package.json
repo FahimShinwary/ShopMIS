@@ -10,7 +10,7 @@
     "dev": "tsx server.ts",
     "dev:electron": "electron .",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external --sourcemap --outfile=dist/server.js && esbuild electron/main.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist-electron/preload.cjs",
-    "package": "npm run build && electron-builder --win --x64 -c.npmRebuild=false",
+    "package": "npm run build && electron-builder --win --x64",
     "clean": "rm -rf dist dist-electron release",
     "rebuild": "npx @electron/rebuild -f -w better-sqlite3",
     "lint": "tsc --noEmit",
@@ -34,7 +34,7 @@
     "asarUnpack": [
       "**/node_modules/better-sqlite3/**/*"
     ],
-    "npmRebuild": true,
+    "npmRebuild": false,
     "win": {
       "target": [
         {
