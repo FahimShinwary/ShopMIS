@@ -146,14 +146,14 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           <div style="font-weight:700">${formatShamsi(tx.date, 'YYYY/MM/DD')} (${formatShamsi(tx.date, 'full')})</div>
           <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
         </td>
-        ${!selectedCustomer ? `<td>${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</td>` : ''}
+        ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
         <td>${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
         <td><strong>${tx.currency || 'AFN'}</strong></td>
-        <td>${tx.bill_number || '-'}</td>
+        <td>${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
         <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}">
           ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
         </td>
-        <td>${tx.description || '-'}</td>
+        <td><span style="unicode-bidi:plaintext;">${tx.description || '-'}</span></td>
       </tr>
     `).join('');
 
@@ -207,6 +207,62 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       contentHtml,
       isRTL
     };
+  };
+
+  const printSingleTransactionBill = (tx: KataTransaction) => {
+    const isRTL = document.documentElement.dir === 'rtl';
+    const customer = customers.find(c => c.id === tx.customer_id);
+    const isPurchase = tx.type === 'purchase' || (tx.type as string) === 'debit';
+    const title = `${isPurchase ? (t.purchase || 'Purchase Bill') : (t.payment || 'Payment Receipt')} #${tx.bill_number || tx.id}`;
+    
+    const contentHtml = `
+      <div class="header">
+        <h1>${title}</h1>
+        <p>${formatShamsi(tx.date, 'full')} | USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</p>
+      </div>
+
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:20px; background:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div><strong>${t.customer || 'Customer'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.name || 'Unknown'}</span></div>
+          <div><strong>${t.bill_number || 'Bill #'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${tx.bill_number || '-'}</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div><strong>${t.phone || 'Phone'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.contact || '-'}</span></div>
+          <div><strong>${t.type || 'Type'}:</strong> ${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</div>
+        </div>
+        <div><strong>${t.address || 'Address'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.address || '-'}</span></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>${t.description || 'Description'}</th>
+            <th>${t.currency || 'Currency'}</th>
+            <th class="text-end">${t.amount || 'Amount'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="unicode-bidi:plaintext;">${tx.description || (isPurchase ? (t.purchase || 'Purchase Transaction') : (t.payment || 'Payment Received'))}</span></td>
+            <td><strong>${tx.currency || 'AFN'}</strong></td>
+            <td class="text-end ${isPurchase ? 'badge-expense' : 'badge-income'}" style="font-size:14px; font-weight:800;">
+              ${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>Shop MIS System - Verified Transaction Document</p>
+      </div>
+    `;
+
+    openPrintablePDFWindow({
+      title,
+      filename: `bill_${tx.bill_number || tx.id}_${format(new Date(tx.date), 'yyyy-MM-dd')}.pdf`,
+      contentHtml,
+      isRTL
+    });
   };
 
   const handlePrint = () => {
@@ -464,6 +520,13 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
                     </td>
                     <td className="p-5 text-end">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => printSingleTransactionBill(tx)}
+                          className="p-2 rounded-xl bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all"
+                          title={t.print || 'Print Bill / Receipt'}
+                        >
+                          <Printer size={16} />
+                        </button>
                         <button 
                           onClick={() => onEdit(tx)}
                           className="p-2 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"

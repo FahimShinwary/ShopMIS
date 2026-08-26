@@ -102,6 +102,48 @@ const resetDatabase = () => {
   }
 };
 
+// Helper to load better-sqlite3 with automatic binary resolution for Electron ASAR
+const loadSqliteDatabase = (targetDbPath: string) => {
+  let DatabaseConstructor: any;
+  try {
+    DatabaseConstructor = typeof _require !== 'undefined' ? _require('better-sqlite3') : Database;
+  } catch (e) {
+    DatabaseConstructor = Database;
+  }
+
+  // 1. Try standard initialization
+  try {
+    return new DatabaseConstructor(targetDbPath);
+  } catch (err1: any) {
+    console.warn('Standard SQLite initialization failed, searching for native bindings:', err1?.message);
+
+    // 2. Search known native module locations (ASAR unpacked, resources, cwd, etc.)
+    const possibleBindingPaths = [
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', `${process.platform}-${process.arch}.node`),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', 'win32-x64.node'),
+      path.join(__dirname, '..', '..', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+      path.join(__dirname, '..', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+      path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+      path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
+    ];
+
+    for (const bindingPath of possibleBindingPaths) {
+      try {
+        if (fs.existsSync(bindingPath)) {
+          console.log(`Found native binding at: ${bindingPath}, attempting initialization...`);
+          return new DatabaseConstructor(targetDbPath, { nativeBinding: bindingPath });
+        }
+      } catch (bindingErr: any) {
+        console.warn(`Failed binding at ${bindingPath}:`, bindingErr?.message);
+      }
+    }
+
+    throw err1;
+  }
+};
+
 export const getDb = () => {
   if (!dbInstance) {
     dbPath = getDatabasePath();
@@ -116,20 +158,20 @@ export const getDb = () => {
 
     try {
       console.log(`Initializing database at: ${dbPath}`);
-      dbInstance = new Database(dbPath);
+      dbInstance = loadSqliteDatabase(dbPath);
       dbInstance.pragma('journal_mode = WAL');
       dbInstance.pragma('synchronous = NORMAL');
     } catch (error: any) {
       console.error('Initial database connection failed:', error);
       if (error.message && error.message.includes('malformed')) {
         resetDatabase();
-        dbInstance = new Database(dbPath);
+        dbInstance = loadSqliteDatabase(dbPath);
       } else {
         // Fallback to TEMP folder if primary location fails
         try {
           const fallbackPath = path.join(process.env.TEMP || '/tmp', 'shop_mis_fallback.db');
           console.warn(`Falling back to database at: ${fallbackPath}`);
-          dbInstance = new Database(fallbackPath);
+          dbInstance = loadSqliteDatabase(fallbackPath);
           dbInstance.pragma('journal_mode = WAL');
         } catch (fallbackErr) {
           throw error;

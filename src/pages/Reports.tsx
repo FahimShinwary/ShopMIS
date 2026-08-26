@@ -438,13 +438,16 @@ export default function Reports({
               const curr = e.currency || 'AFN';
               return `
                 <tr>
-                  <td>${formatShamsi(e.date, 'full')}</td>
-                  <td><strong>${cName}</strong></td>
+                  <td>
+                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                  </td>
+                  <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
                   <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
                   <td><strong>${curr}</strong></td>
-                  <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()}</td>
-                  <td>${e.bill_number || '-'}</td>
-                  <td>${e.description}</td>
+                  <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
                 </tr>
               `;
             }).join('') : `<tr><td colspan="7" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
@@ -477,13 +480,16 @@ export default function Reports({
               const curr = e.currency || 'AFN';
               return `
                 <tr>
-                  <td>${formatShamsi(e.date, 'full')}</td>
-                  <td><strong>${cName}</strong></td>
+                  <td>
+                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                  </td>
+                  <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
                   <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
                   <td><strong>${curr}</strong></td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()}</td>
-                  <td>${e.bill_number || '-'}</td>
-                  <td>${e.description}</td>
+                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
+                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
                 </tr>
               `;
             }).join('') : `<tr><td colspan="7" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
@@ -511,12 +517,15 @@ export default function Reports({
           <tbody>
             ${filteredStock.length > 0 ? filteredStock.map(e => `
               <tr>
-                <td>${formatShamsi(e.date, 'full')}</td>
-                <td><strong>${e.item_name}</strong></td>
+                <td>
+                  <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                  <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                </td>
+                <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
                 <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
                 <td>${e.quantity.toLocaleString()}</td>
-                <td>${e.bill_number || '-'}</td>
-                <td>${e.description}</td>
+                <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+                <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
               </tr>
             `).join('') : `<tr><td colspan="6" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
           </tbody>
@@ -547,11 +556,11 @@ export default function Reports({
               return `
                 <tr>
                   <td style="text-align: center; color: #64748b; font-weight: bold;">${idx + 1}</td>
-                  <td><strong>${custName}</strong></td>
+                  <td><strong style="unicode-bidi:plaintext;">${custName}</strong></td>
                   <td><strong>${s.currency || 'AFN'}</strong></td>
-                  <td>${s.total_purchase.toLocaleString()}</td>
-                  <td class="badge-income">${s.total_paid.toLocaleString()}</td>
-                  <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${s.remaining_balance.toLocaleString()}</td>
+                  <td>${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
+                  <td class="badge-income">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
+                  <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
                 </tr>
               `;
             }).join('') : `<tr><td colspan="6" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
@@ -569,8 +578,8 @@ export default function Reports({
         </div>
 
         <div style="margin-top:16px; padding:12px; border:1px solid #93c5fd; border-radius:8px; background-color:#eff6ff;">
-          <h2 style="margin:0; font-size:16px; color:#1e40af;">Customer: ${selectedCustomerObj.name}</h2>
-          <p style="margin:4px 0 0 0; font-size:12px; color:#475569;">Contact: ${selectedCustomerObj.contact || '-'} | Address: ${selectedCustomerObj.address || '-'}</p>
+          <h2 style="margin:0; font-size:16px; color:#1e40af;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
+          <p style="margin:4px 0 0 0; font-size:12px; color:#475569;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
         </div>
 
         <h3 style="margin-top: 20px; font-size: 14px; font-weight: 700; color: #0f172a;">
@@ -621,12 +630,15 @@ export default function Reports({
               const curr = e.currency || 'AFN';
               return `
                 <tr>
-                  <td>${formatShamsi(e.date, 'full')} (${format(new Date(e.date), 'yyyy-MM-dd')})</td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? 'Purchase' : 'Payment'}</td>
+                  <td>
+                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                  </td>
+                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
                   <td><strong>${curr}</strong></td>
                   <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
-                  <td>${e.bill_number || '-'}</td>
-                  <td>${e.description}</td>
+                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
                 </tr>
               `;
             }).join('') : `<tr><td colspan="6" style="text-align:center;">No records found</td></tr>`}

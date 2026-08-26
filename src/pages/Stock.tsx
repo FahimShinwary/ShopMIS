@@ -129,17 +129,17 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
           <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
           <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
         </td>
-        <td>${e.item_name}</td>
-        <td>${e.type === 'in' ? (t.stock_in || 'In') : (t.stock_out || 'Out')}</td>
+        <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
+        <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
         <td>${e.quantity.toLocaleString()}</td>
-        <td>${e.bill_number || '-'}</td>
-        <td>${e.description}</td>
+        <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+        <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
       </tr>
     `).join('');
 
     let summaryRows = inventorySummary.map(item => `
       <tr>
-        <td>${item.name}</td>
+        <td><strong style="unicode-bidi:plaintext;">${item.name}</strong></td>
         <td>${item.in.toLocaleString()}</td>
         <td>${item.out.toLocaleString()}</td>
         <td style="font-weight: bold;">${item.balance.toLocaleString()}</td>
@@ -205,6 +205,59 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
       contentHtml,
       isRTL
     };
+  };
+
+  const printSingleStockVoucher = (entry: StockEntry) => {
+    const isRTL = document.documentElement.dir === 'rtl';
+    const title = `${entry.type === 'in' ? (t.stock_in || 'Stock In Note') : (t.stock_out || 'Stock Out Note')} #${entry.bill_number || entry.id}`;
+
+    const contentHtml = `
+      <div class="header">
+        <h1>${title}</h1>
+        <p>${formatShamsi(entry.date, 'full')} | USA: ${format(new Date(entry.date), 'yyyy-MM-dd')}</p>
+      </div>
+
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:20px; background:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div><strong>${t.item_name || 'Item Name'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${entry.item_name}</span></div>
+          <div><strong>${t.bill_number || 'Bill #'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${entry.bill_number || '-'}</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <div><strong>${t.type || 'Movement Type'}:</strong> ${entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</div>
+          <div><strong>${t.quantity || 'Quantity'}:</strong> <span style="font-weight:800;">${entry.quantity.toLocaleString()}</span></div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>${t.item_name || 'Item Name'}</th>
+            <th>${t.type || 'Type'}</th>
+            <th>${t.quantity || 'Quantity'}</th>
+            <th>${t.description || 'Description'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="unicode-bidi:plaintext;">${entry.item_name}</strong></td>
+            <td class="${entry.type === 'in' ? 'badge-income' : 'badge-expense'}">${entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
+            <td style="font-weight:800;">${entry.quantity.toLocaleString()}</td>
+            <td><span style="unicode-bidi:plaintext;">${entry.description || '-'}</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>Shop MIS System - Official Stock Movement Voucher</p>
+      </div>
+    `;
+
+    openPrintablePDFWindow({
+      title,
+      filename: `stock_voucher_${entry.bill_number || entry.id}_${format(new Date(entry.date), 'yyyy-MM-dd')}.pdf`,
+      contentHtml,
+      isRTL
+    });
   };
 
   const handlePrint = () => {
@@ -597,6 +650,15 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
                   </td>
                   <td className="p-4 text-end">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => printSingleStockVoucher(entry)}
+                        className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all"
+                        title={t.print || 'Print Voucher'}
+                      >
+                        <Printer size={14} />
+                      </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}

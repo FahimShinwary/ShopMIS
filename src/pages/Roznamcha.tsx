@@ -184,12 +184,12 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
                 <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
                 <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
-              <td><strong>${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
+              <td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
               <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
               <td><strong>${e.currency || 'AFN'}</strong></td>
               <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
-              <td>${e.bill_number || '-'}</td>
-              <td>${e.description}</td>
+              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
             </tr>
           `).join('')}
         </tbody>
@@ -206,6 +206,60 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       contentHtml,
       isRTL
     };
+  };
+
+  const printSingleRoznamchaBill = (entry: RoznamchaEntry) => {
+    const isRTL = document.documentElement.dir === 'rtl';
+    const customer = customers.find(c => c.id === entry.customer_id);
+    const title = `${entry.type === 'income' ? (t.income || 'Income Receipt') : (t.expense || 'Expense Voucher')} #${entry.bill_number || entry.id}`;
+
+    const contentHtml = `
+      <div class="header">
+        <h1>${title}</h1>
+        <p>${formatShamsi(entry.date, 'full')} | USA: ${format(new Date(entry.date), 'yyyy-MM-dd')}</p>
+      </div>
+
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:20px; background:#f8fafc;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div><strong>${t.customer || 'Customer'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.name || '-'}</span></div>
+          <div><strong>${t.bill_number || 'Bill #'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${entry.bill_number || '-'}</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <div><strong>${t.type || 'Type'}:</strong> ${entry.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</div>
+          <div><strong>${t.currency || 'Currency'}:</strong> ${entry.currency || 'AFN'}</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>${t.description || 'Description'}</th>
+            <th>${t.currency || 'Currency'}</th>
+            <th class="text-end">${t.amount || 'Amount'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="unicode-bidi:plaintext;">${entry.description || '-'}</span></td>
+            <td><strong>${entry.currency || 'AFN'}</strong></td>
+            <td class="text-end ${entry.type === 'income' ? 'badge-income' : 'badge-expense'}" style="font-size:14px; font-weight:800;">
+              ${entry.type === 'income' ? '+' : '-'}${entry.amount.toLocaleString()} ${entry.currency || 'AFN'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>Shop MIS System - Official Roznamcha Voucher</p>
+      </div>
+    `;
+
+    openPrintablePDFWindow({
+      title,
+      filename: `roznamcha_voucher_${entry.bill_number || entry.id}_${format(new Date(entry.date), 'yyyy-MM-dd')}.pdf`,
+      contentHtml,
+      isRTL
+    });
   };
 
   const handlePrint = () => {
@@ -562,6 +616,15 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
                   </td>
                   <td className="p-4 text-end">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => printSingleRoznamchaBill(entry)}
+                        className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all"
+                        title={t.print || 'Print Voucher'}
+                      >
+                        <Printer size={14} />
+                      </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}

@@ -3,6 +3,7 @@ import { Plus, Search, User, MapPin, Phone, Edit2, Trash2, X, CheckCircle2, Aler
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Customer } from '../types';
+import { formatShamsi } from '../lib/shamsi';
 import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
 import Pagination from '../components/Pagination';
 
@@ -48,31 +49,31 @@ export default function Customers({ t, query, customers, onAdd, onEdit, onDelete
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>${t.customer_name || 'Name'}</th>
+            <th style="width: 60px; text-align: center;">ID</th>
+            <th>${t.customer_name || 'Customer Name'}</th>
             <th>${t.address || 'Address'}</th>
-            <th>${t.contact || 'Contact'}</th>
+            <th>${t.contact || 'Contact / Phone'}</th>
           </tr>
         </thead>
         <tbody>
           ${filteredCustomers.map(c => `
             <tr>
-              <td>${c.id}</td>
-              <td>${c.name}</td>
-              <td>${c.address || '-'}</td>
-              <td>${c.contact || '-'}</td>
+              <td style="text-align: center; font-weight: 700; color: #64748b;">${c.id}</td>
+              <td><strong style="unicode-bidi: plaintext;">${c.name}</strong></td>
+              <td><span style="unicode-bidi: plaintext;">${c.address || '-'}</span></td>
+              <td><span style="unicode-bidi: plaintext;">${c.contact || '-'}</span></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
 
       <div class="footer">
-        <p>Printed by Shop MIS System</p>
+        <p>Printed by Shop MIS System | ${formatShamsi(new Date(), 'full')}</p>
       </div>
     `;
 
     return {
-      title: 'Customer Directory Report',
+      title: `${t.customers || 'Customer'} ${t.report || 'Report'}`,
       filename: `customer_directory_${new Date().toISOString().split('T')[0]}.pdf`,
       contentHtml,
       isRTL

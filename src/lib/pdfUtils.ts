@@ -10,17 +10,22 @@ export interface PDFReportOptions {
   autoPrint?: boolean;
 }
 
-const PASHTO_FONT_STACK = "'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif";
+export const PASHTO_FONT_STACK = "'Cairo', 'Vazirmatn', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif";
 
 /**
  * Standard Print and PDF CSS rules applied across all reports, columns, and printable documents.
- * Guarantees connected cursive Pashto/Dari ligatures and crystal-clear typography.
+ * Guarantees connected cursive Pashto/Dari ligatures, modern color compatibility (oklch/Tailwind v4),
+ * and crystal-clear typography across Roznamcha, Kata, Customers, and Stock Book.
  */
 export const getStandardPrintCss = (isRTL: boolean = true): string => `
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap');
+
   * {
     box-sizing: border-box;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
   }
 
   html, body {
@@ -39,6 +44,9 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .pdf-report-root, 
   .pdf-container, 
   table, 
+  thead,
+  tbody,
+  tr,
   th, 
   td, 
   h1, 
@@ -50,19 +58,23 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   span, 
   strong, 
   b,
-  label {
+  label,
+  small,
+  i {
     font-family: ${PASHTO_FONT_STACK} !important;
     letter-spacing: normal !important;
     word-spacing: normal !important;
-    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "mkmk" 1, "mark" 1 !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "mkmk" 1, "mark" 1, "kern" 1 !important;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
   }
 
   ${isRTL ? `
   .pdf-report-root, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
     direction: rtl !important;
     text-align: right !important;
+    unicode-bidi: plaintext;
   }
   .header { text-align: center !important; }
   .header h1, .header h2, .header p { text-align: center !important; }
@@ -91,6 +103,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-size: 22px;
     font-weight: 800;
     line-height: 1.3;
+    letter-spacing: normal !important;
   }
   .header h2 {
     margin: 4px 0;
@@ -98,12 +111,14 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-size: 16px;
     font-weight: 700;
     line-height: 1.3;
+    letter-spacing: normal !important;
   }
   .header p {
     margin: 0;
     color: #475569;
     font-size: 12px;
     font-weight: 600;
+    letter-spacing: normal !important;
   }
 
   .summary-grid {
@@ -123,6 +138,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-size: 11px;
     font-weight: 700;
     color: #475569;
+    letter-spacing: normal !important;
   }
   .summary-card p {
     margin: 3px 0 0;
@@ -130,6 +146,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-weight: 800;
     color: #0f172a;
     line-height: 1.3;
+    letter-spacing: normal !important;
   }
 
   table {
@@ -138,6 +155,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     margin-top: 14px;
     margin-bottom: 14px;
     background-color: #ffffff;
+    letter-spacing: normal !important;
   }
   
   th, td {
@@ -148,6 +166,10 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     color: #0f172a;
     vertical-align: middle;
     text-align: ${isRTL ? 'right' : 'left'} !important;
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    word-break: break-word;
+    unicode-bidi: plaintext;
   }
 
   /* Specific column alignment rules */
@@ -162,6 +184,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     background-color: #f1f5f9;
     font-weight: 800;
     color: #0f172a;
+    letter-spacing: normal !important;
   }
 
   /* Status and badge color styles */
@@ -185,6 +208,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     color: #64748b;
     border-top: 1px solid #cbd5e1;
     padding-top: 12px;
+    letter-spacing: normal !important;
   }
 
   @media print {
@@ -193,6 +217,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
       background: #ffffff !important;
       padding: 0 !important;
       margin: 0 !important;
+      letter-spacing: normal !important;
     }
     .pdf-wrapper { padding: 0 !important; display: block !important; }
     .pdf-container { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
@@ -393,10 +418,10 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
 /**
  * High-Definition Direct PDF Download using html2canvas-pro + jsPDF
  * - Renders in high z-index overlay so html2canvas captures 100% of text and tables
- * - Handles modern CSS colors (oklch, oklab, lch) seamlessly
- * - Guarantees fully connected cursive Pashto ligatures across all fields (Customer Name, Description, Amount, etc.)
- * - Scale 2.0 for 300 DPI Ultra-HD print sharpness
- * - JPEG 0.92 stream compression yielding ~200-400 KB compact file size
+ * - Handles modern CSS colors (oklch, oklab, lch) seamlessly via html2canvas-pro
+ * - Guarantees fully connected cursive Pashto ligatures across all fields (Customer Name, Bill #, Description, Amount, etc.)
+ * - Scale 2.2 for 300 DPI Ultra-HD print sharpness (~1,800px width)
+ * - JPEG 0.92 stream compression yielding ~200-400 KB compact file size with crisp glyphs
  * - Multi-page pagination when dataset is long
  */
 export async function downloadPDFDirectly(options: PDFReportOptions): Promise<void> {
@@ -439,12 +464,12 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
   document.body.appendChild(container);
 
   // Allow layout and font rendering calculation
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await new Promise((resolve) => setTimeout(resolve, 200));
 
   try {
-    // 3. Ultra-HD Canvas Snapshot using html2canvas-pro
+    // 3. Ultra-HD Canvas Snapshot using html2canvas-pro at scale 2.2 (~1,800px width)
     const canvas = await html2canvas(container, {
-      scale: 2.0, // ~1,600px width matching high-resolution print standard
+      scale: 2.2, // Ultra-HD scale (~1,800px width) matching 300 DPI print standards
       useCORS: true,
       allowTaint: true,
       logging: false,
@@ -473,7 +498,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
     const imgWidth = printableWidth;
     const imgHeight = (canvas.height * printableWidth) / canvas.width;
 
-    // 5. Optimized Stream Compression: JPEG 0.92 quality (reduces size to ~200-400KB)
+    // 5. Optimized Stream Compression: JPEG 0.92 quality (reduces size to ~200-400KB with sharp typography)
     const imgData = canvas.toDataURL('image/jpeg', 0.92);
 
     if (imgHeight <= printableHeight) {
