@@ -10,9 +10,9 @@
     "dev": "tsx server.ts",
     "dev:electron": "electron .",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --packages=external --sourcemap --outfile=dist/server.js && esbuild electron/main.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist-electron/preload.cjs",
-    "package": "npm run build && electron-builder --win --x64",
+    "package": "npm run build && electron-builder",
     "clean": "rm -rf dist dist-electron release",
-    "rebuild": "npx @electron/rebuild -f -w better-sqlite3",
+    "rebuild": "npx --yes @electron/rebuild -f -w better-sqlite3",
     "lint": "tsc --noEmit",
     "start": "node dist/server.js"
   },
@@ -24,13 +24,23 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
+      "dist-electron/**/*"
     ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "dependencies": {
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "^12.8.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
@@ -57,7 +67,7 @@
     "@types/jalaali-js": "^1.2.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
-    "electron": "29.4.0",
+    "electron": "^29.4.0",
     "electron-builder": "^24.13.3",
     "esbuild": "^0.28.1",
     "tailwindcss": "^4.1.14",
