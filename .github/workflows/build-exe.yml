@@ -7,60 +7,32 @@ on:
       - master
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install
 
-      - name: Rebuild better-sqlite3 for Electron 29
-        run: npx @electron/rebuild -f -w better-sqlite3 -v 29.4.0 --module-dir .
+      - name: Rebuild Native Modules (better-sqlite3)
+        run: npx --yes @electron/rebuild -f -w better-sqlite3
 
-      - name: Build Web Assets & Electron Bundle
-        run: npm run build
-
-      - name: Package Windows EXE Installer
-        run: npx electron-builder --win --x64
+      - name: Build and Package EXE
+        run: npm run package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Installer as Workflow Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Shop-MIS-Windows-Installer
+          name: windows-installer
           path: release/*.exe
-          retention-days: 30
-
-      - name: Create / Update GitHub Release with EXE
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
-        with:
-          tag_name: v1.0.0
-          name: Shop MIS Windows Installer
-          body: |
-            ## Shop MIS Desktop Installer for Windows
-            - Download `Shop MIS Setup 1.0.0.exe` below.
-          draft: false
-          prerelease: false
-          files: release/*.exe
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
