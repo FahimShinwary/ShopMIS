@@ -2,19 +2,17 @@ import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import * as crud from '../src/database/crud';
-import { dbPath, reinitDatabase, getCustomDbFolder, setCustomDbFolder, performDatabaseBackup } from '../src/database/db';
+import { dbPath, reinitDatabase, getCustomDbFolder, setCustomDbFolder, performDatabaseBackup, getShopMisAppDataDir, writeStartupLog } from '../src/database/db';
+
+// Ensure consistent application name and userData directory
+app.setName('Shop MIS');
+try {
+  const customUserData = getShopMisAppDataDir();
+  app.setPath('userData', customUserData);
+} catch (e) {}
 
 const writeCrashLog = (type: string, error: any) => {
-  try {
-    const logDir = app?.getPath ? app.getPath('userData') : process.cwd();
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    const logFile = path.join(logDir, 'crash_report.log');
-    const timestamp = new Date().toISOString();
-    const msg = `[${timestamp}] [${type}] ${error?.stack || error?.message || error}\n`;
-    fs.appendFileSync(logFile, msg, 'utf8');
-  } catch (e) {}
+  writeStartupLog(type, error);
 };
 
 // Handle uncaught exceptions & promise rejections
@@ -22,7 +20,10 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   writeCrashLog('UncaughtException', error);
   try {
-    dialog.showErrorBox('Critical Error', `${error?.message || 'An unexpected error occurred.'}\n\nPlease check crash_report.log in %APPDATA%\\Shop MIS`);
+    dialog.showErrorBox(
+      'Shop MIS - Critical Error',
+      `An unexpected error occurred:\n\n${error?.message || error}\n\nPlease check startup-error.log in %APPDATA%\\Shop MIS`
+    );
   } catch (e) {}
 });
 
@@ -31,9 +32,14 @@ process.on('unhandledRejection', (reason) => {
   writeCrashLog('UnhandledRejection', reason);
 });
 
+app.on('child-process-gone', (event, details) => {
+  console.error('Child process gone:', details);
+  writeCrashLog('ChildProcessGone', details);
+});
+
 const getLicensePath = () => {
   try {
-    const dir = app?.getPath ? app.getPath('userData') : process.cwd();
+    const dir = getShopMisAppDataDir();
     return path.join(dir, 'license.json');
   } catch (e) {
     return path.join(process.cwd(), 'license.json');
@@ -77,7 +83,7 @@ const isDev = !app.isPackaged;
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // If another instance is running, exit immediately
+  writeCrashLog('SingleInstanceLock', 'Another instance of Shop MIS is already running. Quitting duplicate instance.');
   app.quit();
 } else {
   app.on('second-instance', () => {

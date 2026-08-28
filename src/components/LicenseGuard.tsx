@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, AlertCircle, CheckCircle2, KeyRound, Copy, Sparkles, Languages } from 'lucide-react';
+import { Lock, ShieldCheck, AlertCircle, CheckCircle2, KeyRound, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { convertPersianDigits } from '../lib/utils';
 import { Language } from '../types';
-
-const DEFAULT_LICENSE_KEY = 'NewCode@ShopMIS';
 
 const isValidKey = (key: string): boolean => {
   if (!key) return false;
@@ -34,22 +32,17 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [lang, setLang] = useState<Language>('en');
 
   const t = {
     en: {
       title: 'System Activation Required',
-      desc: 'Please enter your software activation license key to unlock and access Shop MIS.',
+      desc: 'Please enter your software activation license key provided by your vendor to unlock and access Shop MIS.',
       code_label: 'Activation License Key',
       placeholder: 'Enter or paste activation code',
       activate_btn: 'Activate System Now',
       activating: 'Verifying Activation...',
-      default_code_title: 'Default Installation Key',
-      use_default_btn: 'Apply Default Key',
-      copy_key: 'Copy',
-      copied: 'Copied!',
-      invalid_code: 'Invalid activation code. Please check or use the default key.',
+      invalid_code: 'Invalid activation code. Please enter a valid license key.',
       success: 'System successfully activated! Unlocking...',
       footer: '© 2026 Soft Touch Technology • All Rights Reserved',
     },
@@ -60,11 +53,7 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
       placeholder: 'د فعالولو کوډ داخل یا پیسټ کړئ',
       activate_btn: 'سیسټم اوس فعال کړئ',
       activating: 'د فعالولو تایید روان دی...',
-      default_code_title: 'اصلي ډیفالټ کوډ',
-      use_default_btn: 'ډیفالټ کوډ وکاروئ',
-      copy_key: 'کاپي',
-      copied: 'کاپي شو!',
-      invalid_code: 'د فعالولو کوډ ناسم دی. مهرباني وکړئ کوډ وګورئ یا ډیفالټ کوډ وکاروئ.',
+      invalid_code: 'د فعالولو کوډ ناسم دی. مهرباني وکړئ سم کوډ داخل کړئ.',
       success: 'سیسټم په بریالیتوب سره فعال شو! ننوتل روان دي...',
       footer: '© 2026 سافټ ټچ ټکنالوژي • ټول حقونه خوندي دي',
     },
@@ -75,11 +64,7 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
       placeholder: 'کد فعال‌سازی را وارد یا پیست کنید',
       activate_btn: 'اکنون سیستم را فعال کنید',
       activating: 'در حال بررسی فعال‌سازی...',
-      default_code_title: 'کد پیش‌فرض نصب',
-      use_default_btn: 'استفاده از کد پیش‌فرض',
-      copy_key: 'کاپی',
-      copied: 'کاپی شد!',
-      invalid_code: 'کد فعال‌سازی نامعتبر است. لطفاً کد را بررسی نموده یا از کد پیش‌فرض استفاده کنید.',
+      invalid_code: 'کد فعال‌سازی نامعتبر است. لطفاً کلید معتبر وارد نمایید.',
       success: 'سیستم با موفقیت فعال گردید! در حال بازگشایی...',
       footer: '© 2026 تکنالوژی سافت تاچ • تمام حقوق محفوظ است',
     },
@@ -118,18 +103,6 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
     }
   };
 
-  const handleApplyKey = (keyToApply: string) => {
-    const clean = convertPersianDigits(keyToApply.trim());
-    setInputKey(clean);
-    setError(null);
-  };
-
-  const handleCopyDefault = () => {
-    navigator.clipboard.writeText(DEFAULT_LICENSE_KEY);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -165,7 +138,7 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
       }
 
       if (success || isValidKey(cleanKey)) {
-        localStorage.setItem('shop_mis_license', cleanKey || DEFAULT_LICENSE_KEY);
+        localStorage.setItem('shop_mis_license', cleanKey);
         setSuccessMsg(true);
         setTimeout(() => {
           setIsLicensed(true);
@@ -177,7 +150,7 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
     } catch (err) {
       // Local fallback activation if offline
       if (isValidKey(cleanKey)) {
-        localStorage.setItem('shop_mis_license', cleanKey || DEFAULT_LICENSE_KEY);
+        localStorage.setItem('shop_mis_license', cleanKey);
         setSuccessMsg(true);
         setTimeout(() => {
           setIsLicensed(true);
@@ -251,38 +224,6 @@ export default function LicenseGuard({ children }: LicenseGuardProps) {
             <p className="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
               {t.desc}
             </p>
-          </div>
-
-          {/* Quick Helper Default Key Card */}
-          <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-brand-500/30 transition-all">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Sparkles size={14} className="text-brand-400" />
-                {t.default_code_title}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  id="btn-copy-default-license"
-                  onClick={handleCopyDefault}
-                  className="text-[11px] px-2 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 flex items-center gap-1 border border-white/10 transition-colors"
-                >
-                  {copied ? <CheckCircle2 size={12} className="text-green-400" /> : <Copy size={12} />}
-                  {copied ? t.copied : t.copy_key}
-                </button>
-                <button
-                  type="button"
-                  id="btn-use-default-license"
-                  onClick={() => handleApplyKey(DEFAULT_LICENSE_KEY)}
-                  className="text-[11px] px-2.5 py-1 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded-lg font-semibold border border-brand-500/30 transition-colors"
-                >
-                  {t.use_default_btn}
-                </button>
-              </div>
-            </div>
-            <div className="bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-center font-mono text-sm tracking-wider text-brand-300 font-bold select-all">
-              {DEFAULT_LICENSE_KEY}
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

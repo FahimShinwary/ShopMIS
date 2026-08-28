@@ -26,7 +26,7 @@ import { cn } from '../lib/utils';
 import { formatShamsi, isDateInRange } from '../lib/shamsi';
 import Pagination from '../components/Pagination';
 import { KataTransaction, KataSummary, Customer } from '../types';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 
 interface KataProps {
   transactions: KataTransaction[];
@@ -140,23 +140,6 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
     const title = selectedCustomer ? `${selectedCustomer.customer_name} (${selectedCustomer.currency || 'AFN'}) - Kata Ledger Report` : 'Kata All Transactions Report';
     const dateRange = dateFilter.start || dateFilter.end ? ` (${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : 'Start'} to ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : 'End'})` : '';
 
-    let tableRows = filteredTransactions.map(tx => `
-      <tr>
-        <td>
-          <div style="font-weight:700">${formatShamsi(tx.date, 'YYYY/MM/DD')} (${formatShamsi(tx.date, 'full')})</div>
-          <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
-        </td>
-        ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
-        <td>${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-        <td><strong>${tx.currency || 'AFN'}</strong></td>
-        <td>${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
-        <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}">
-          ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
-        </td>
-        <td><span style="unicode-bidi:plaintext;">${tx.description || '-'}</span></td>
-      </tr>
-    `).join('');
-
     const summaryHtml = selectedCustomer ? `
       <div class="summary-grid">
         <div class="summary-card">
@@ -171,35 +154,48 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           <h3>${t.remaining_balance || 'Remaining Balance'}</h3>
           <p class="${selectedCustomer.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${selectedCustomer.remaining_balance.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
         </div>
+        <div class="summary-card">
+          <h3>Total Transactions</h3>
+          <p style="color: #0f172a;">${filteredTransactions.length}</p>
+        </div>
       </div>
     ` : '';
 
-    const contentHtml = `
-      <div class="header">
-        <h1>${title}</h1>
-        <p>Generated on ${formatShamsi(new Date(), 'full')}${dateRange}</p>
-      </div>
-      ${summaryHtml}
-      <table>
-        <thead>
-          <tr>
-            <th>${t.date || 'Date'}</th>
-            ${!selectedCustomer ? `<th>${t.customer || 'Customer'}</th>` : ''}
-            <th>${t.type || 'Type'}</th>
-            <th>${t.currency || 'Currency'}</th>
-            <th>${t.bill_number || 'Bill #'}</th>
-            <th>${t.amount || 'Amount'}</th>
-            <th>${t.description || 'Description'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
-      <div class="footer">
-        <p>Printed by Shop MIS System</p>
-      </div>
-    `;
+    const columns = [
+      { header: t.date || 'Date' },
+      ...(!selectedCustomer ? [{ header: t.customer || 'Customer' }] : []),
+      { header: t.type || 'Type' },
+      { header: t.currency || 'Currency' },
+      { header: t.bill_number || 'Bill #' },
+      { header: t.amount || 'Amount' },
+      { header: t.description || 'Description' }
+    ];
+
+    const contentHtml = createPaginatedReportHtml<KataTransaction>({
+      title,
+      dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
+      summaryHtml,
+      records: filteredTransactions,
+      recordsPerPage: 15,
+      isRTL,
+      columns,
+      renderRow: (tx: KataTransaction) => `
+        <tr>
+          <td>
+            <div style="font-weight:700">${formatShamsi(tx.date, 'YYYY/MM/DD')} (${formatShamsi(tx.date, 'full')})</div>
+            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
+          </td>
+          ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
+          <td>${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
+          <td><strong>${tx.currency || 'AFN'}</strong></td>
+          <td>${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
+          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}">
+            ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
+          </td>
+          <td><span style="unicode-bidi:plaintext;">${tx.description || '-'}</span></td>
+        </tr>
+      `
+    });
 
     return {
       title,

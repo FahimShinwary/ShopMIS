@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertPersianDigits } from '../lib/utils';
 import { formatShamsi, isDateInRange } from '../lib/shamsi';
 import { StockEntry } from '../types';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 import { ShamsiDatePicker } from '../components/ShamsiDatePicker';
 import NumericInput from '../components/NumericInput';
 import SmartInput from '../components/SmartInput';
@@ -123,35 +123,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
     const title = 'Stock Inventory Report';
     const dateRange = dateFilter.start || dateFilter.end ? ` (${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : 'Start'} to ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : 'End'})` : '';
 
-    let tableRows = filtered.map(e => `
-      <tr>
-        <td>
-          <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-          <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-        </td>
-        <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
-        <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
-        <td>${e.quantity.toLocaleString()}</td>
-        <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-        <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-      </tr>
-    `).join('');
-
-    let summaryRows = inventorySummary.map(item => `
-      <tr>
-        <td><strong style="unicode-bidi:plaintext;">${item.name}</strong></td>
-        <td>${item.in.toLocaleString()}</td>
-        <td>${item.out.toLocaleString()}</td>
-        <td style="font-weight: bold;">${item.balance.toLocaleString()}</td>
-      </tr>
-    `).join('');
-
-    const contentHtml = `
-      <div class="header">
-        <h1>${title}</h1>
-        <p>Generated on ${formatShamsi(new Date(), 'full')}${dateRange}</p>
-      </div>
-      
+    const summaryHtml = `
       <div class="summary-grid">
         <div class="summary-card">
           <h3>${t.stock_in || 'Stock In'}</h3>
@@ -161,43 +133,48 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
           <h3>${t.stock_out || 'Stock Out'}</h3>
           <p class="badge-expense">${totalStockOut.toLocaleString()}</p>
         </div>
-      </div>
-
-      <h3 style="margin-top: 24px; font-size: 14px; font-weight: 700; color: #0f172a;">${t.inventory_summary || 'Inventory Summary'}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>${t.item_name || 'Item Name'}</th>
-            <th>${t.total_in || 'Total In'}</th>
-            <th>${t.total_out || 'Total Out'}</th>
-            <th>${t.current_balance || 'Current Balance'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${summaryRows}
-        </tbody>
-      </table>
-
-      <h3 style="margin-top: 28px; font-size: 14px; font-weight: 700; color: #0f172a;">${t.transaction_history || 'Transaction History'}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>${t.date || 'Date'}</th>
-            <th>${t.item_name || 'Item Name'}</th>
-            <th>${t.type || 'Type'}</th>
-            <th>${t.quantity || 'Quantity'}</th>
-            <th>${t.bill_number || 'Bill #'}</th>
-            <th>${t.description || 'Description'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRows}
-        </tbody>
-      </table>
-      <div class="footer">
-        <p>Printed by Shop MIS System</p>
+        <div class="summary-card">
+          <h3>Current Total Balance</h3>
+          <p style="color: #0f172a; font-weight: 800;">${(totalStockIn - totalStockOut).toLocaleString()}</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Entries</h3>
+          <p style="color: #0f172a;">${filtered.length}</p>
+        </div>
       </div>
     `;
+
+    const columns = [
+      { header: t.date || 'Date' },
+      { header: t.item_name || 'Item Name' },
+      { header: t.type || 'Type' },
+      { header: t.quantity || 'Quantity' },
+      { header: t.bill_number || 'Bill #' },
+      { header: t.description || 'Description' }
+    ];
+
+    const contentHtml = createPaginatedReportHtml<StockEntry>({
+      title,
+      dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
+      summaryHtml,
+      records: filtered,
+      recordsPerPage: 15,
+      isRTL,
+      columns,
+      renderRow: (e: StockEntry) => `
+        <tr>
+          <td>
+            <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+          </td>
+          <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
+          <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
+          <td style="font-weight: 700;">${e.quantity.toLocaleString()}</td>
+          <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+          <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+        </tr>
+      `
+    });
 
     return {
       title,

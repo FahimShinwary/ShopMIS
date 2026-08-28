@@ -1,29 +1,47 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { createRequire } from 'module';
 
-// Use global require in CJS (Electron), or createRequire in ESM (Server)
-// Vite will transform import.meta.url when bundling for CommonJS
-const _require = typeof require !== 'undefined' ? require : createRequire(import.meta.url);
+// Helper for dynamic require in CJS/ESM
+const _require = typeof require !== 'undefined' ? require : null;
 
-// Helper to get the database path
-const getConfigPath = () => {
+// Safe AppData directory resolver
+export const getShopMisAppDataDir = (): string => {
   try {
-    const electronModule = typeof _require !== 'undefined' ? _require('electron') : null;
+    const electronModule = _require ? _require('electron') : null;
     const electronApp = electronModule?.app;
     if (electronApp && typeof electronApp.getPath === 'function') {
       const uData = electronApp.getPath('userData');
       if (uData) {
         if (!fs.existsSync(uData)) fs.mkdirSync(uData, { recursive: true });
-        return path.join(uData, 'db_config.json');
+        return uData;
       }
     }
   } catch (e) {}
-  
+
   const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library/Application Support') : '/tmp');
   const targetDir = path.join(appData, 'Shop MIS');
-  try { if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true }); } catch (e) {}
+  try {
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+  } catch (e) {}
+  return targetDir;
+};
+
+// Safe diagnostic logger for startup & database operations
+export const writeStartupLog = (type: string, error: any) => {
+  try {
+    const logDir = getShopMisAppDataDir();
+    const logFile = path.join(logDir, 'startup-error.log');
+    const timestamp = new Date().toISOString();
+    const msg = `[${timestamp}] [${type}] ${error?.stack || error?.message || error}\n`;
+    fs.appendFileSync(logFile, msg, 'utf8');
+    console.error(`[${type}]`, error);
+  } catch (e) {}
+};
+
+// Helper to get the database config path
+const getConfigPath = () => {
+  const targetDir = getShopMisAppDataDir();
   return path.join(targetDir, 'db_config.json');
 };
 
@@ -106,40 +124,58 @@ const resetDatabase = () => {
 const loadSqliteDatabase = (targetDbPath: string) => {
   let DatabaseConstructor: any;
   try {
-    DatabaseConstructor = typeof _require !== 'undefined' ? _require('better-sqlite3') : Database;
+    DatabaseConstructor = _require ? _require('better-sqlite3') : Database;
   } catch (e) {
     DatabaseConstructor = Database;
   }
 
-  // 1. Try standard initialization
+  // Safely determine current directory without throwing in ESM environments
+  let currentDir = process.cwd();
+  try {
+    if (typeof __dirname !== 'undefined' && __dirname) {
+      currentDir = __dirname;
+    }
+  } catch (e) {}
+
+  // List of possible native binding locations in packaged and dev environments
+  const execDir = process.execPath ? path.dirname(process.execPath) : '';
+  const possibleBindingPaths = [
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
+    path.join(execDir, 'resources', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', `${process.platform}-${process.arch}.node`),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', 'win32-x64.node'),
+    path.join(currentDir, '..', '..', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(currentDir, '..', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
+    path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
+  ];
+
+  // 1. If running packaged in Electron, prioritize the unpacked native binding directly
+  for (const bindingPath of possibleBindingPaths) {
+    try {
+      if (fs.existsSync(bindingPath)) {
+        console.log(`Loading SQLite native binding from: ${bindingPath}`);
+        return new DatabaseConstructor(targetDbPath, { nativeBinding: bindingPath });
+      }
+    } catch (bindingErr: any) {
+      console.warn(`Attempt with binding at ${bindingPath} failed:`, bindingErr?.message);
+      writeStartupLog('SQLite_Binding_Attempt_Failed', { path: bindingPath, error: bindingErr });
+    }
+  }
+
+  // 2. Fall back to standard initialization
   try {
     return new DatabaseConstructor(targetDbPath);
   } catch (err1: any) {
-    console.warn('Standard SQLite initialization failed, searching for native bindings:', err1?.message);
-
-    // 2. Search known native module locations (ASAR unpacked, resources, cwd, etc.)
-    const possibleBindingPaths = [
-      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
-      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
-      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', `${process.platform}-${process.arch}.node`),
-      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'prebuilds', 'win32-x64.node'),
-      path.join(__dirname, '..', '..', 'app.asar.unpacked', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
-      path.join(__dirname, '..', 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
-      path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'),
-      path.join(process.cwd(), 'node_modules', 'better-sqlite3', 'build', 'Debug', 'better_sqlite3.node'),
-    ];
-
-    for (const bindingPath of possibleBindingPaths) {
-      try {
-        if (fs.existsSync(bindingPath)) {
-          console.log(`Found native binding at: ${bindingPath}, attempting initialization...`);
-          return new DatabaseConstructor(targetDbPath, { nativeBinding: bindingPath });
-        }
-      } catch (bindingErr: any) {
-        console.warn(`Failed binding at ${bindingPath}:`, bindingErr?.message);
-      }
-    }
-
+    console.error('Standard SQLite initialization failed:', err1?.message);
+    writeStartupLog('SQLite_Init_Failure', {
+      error: err1,
+      targetDbPath,
+      testedPaths: possibleBindingPaths,
+      resourcesPath: process.resourcesPath,
+      execPath: process.execPath,
+    });
     throw err1;
   }
 };
@@ -261,14 +297,6 @@ export const getDb = () => {
       if (!userCountRow || userCountRow.count === 0) {
         console.log('No users found in database. Seeding initial default admin user...');
         dbInstance.prepare("INSERT INTO users (username, password, role, language) VALUES ('admin', 'NewCode@ShopMIS', 'admin', 'en')").run();
-      }
-
-      // Seed default license if not set
-      const licenseRow = dbInstance.prepare("SELECT value FROM settings WHERE key = 'system_license'").get() as any;
-      if (!licenseRow) {
-        console.log('Seeding initial system license in database...');
-        dbInstance.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('system_license', ?)").run(JSON.stringify('NewCode@ShopMIS'));
-        dbInstance.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('license_activation_date', ?)").run(JSON.stringify(new Date().toISOString()));
       }
 
       // Migrations

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Customer } from '../types';
 import { formatShamsi } from '../lib/shamsi';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 import Pagination from '../components/Pagination';
 
 interface CustomersProps {
@@ -40,40 +40,42 @@ export default function Customers({ t, query, customers, onAdd, onEdit, onDelete
 
   const buildCustomerReportData = () => {
     const isRTL = document.documentElement.dir === 'rtl';
-    const contentHtml = `
-      <div class="header">
-        <h1>${t.customers || 'Customer'} ${t.report || 'Report'}</h1>
-        <p>${t.total_customers || 'Total Customers'}: ${filteredCustomers.length}</p>
-      </div>
+    const title = `${t.customers || 'Customer'} ${t.report || 'Report'}`;
 
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 60px; text-align: center;">ID</th>
-            <th>${t.customer_name || 'Customer Name'}</th>
-            <th>${t.address || 'Address'}</th>
-            <th>${t.contact || 'Contact / Phone'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filteredCustomers.map(c => `
-            <tr>
-              <td style="text-align: center; font-weight: 700; color: #64748b;">${c.id}</td>
-              <td><strong style="unicode-bidi: plaintext;">${c.name}</strong></td>
-              <td><span style="unicode-bidi: plaintext;">${c.address || '-'}</span></td>
-              <td><span style="unicode-bidi: plaintext;">${c.contact || '-'}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div class="footer">
-        <p>Printed by Shop MIS System | ${formatShamsi(new Date(), 'full')}</p>
+    const summaryHtml = `
+      <div class="summary-grid">
+        <div class="summary-card">
+          <h3>${t.total_customers || 'Total Customers'}</h3>
+          <p style="color: #0f172a; font-weight: 800;">${filteredCustomers.length}</p>
+        </div>
       </div>
     `;
 
+    const contentHtml = createPaginatedReportHtml({
+      title,
+      dateText: `${t.total_customers || 'Total Customers'}: ${filteredCustomers.length}`,
+      summaryHtml,
+      records: filteredCustomers,
+      recordsPerPage: 15,
+      isRTL,
+      columns: [
+        { header: 'ID', style: 'width: 60px; text-align: center;' },
+        { header: t.customer_name || 'Customer Name' },
+        { header: t.address || 'Address' },
+        { header: t.contact || 'Contact / Phone' }
+      ],
+      renderRow: (c) => `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: #64748b;">${c.id}</td>
+          <td><strong style="unicode-bidi: plaintext;">${c.name}</strong></td>
+          <td><span style="unicode-bidi: plaintext;">${c.address || '-'}</span></td>
+          <td><span style="unicode-bidi: plaintext;">${c.contact || '-'}</span></td>
+        </tr>
+      `
+    });
+
     return {
-      title: `${t.customers || 'Customer'} ${t.report || 'Report'}`,
+      title,
       filename: `customer_directory_${new Date().toISOString().split('T')[0]}.pdf`,
       contentHtml,
       isRTL

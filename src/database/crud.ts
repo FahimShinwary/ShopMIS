@@ -1,5 +1,5 @@
 import { safeQuery } from './db.ts';
-import { RoznamchaEntry, KataTransaction, KataSummary, StockEntry, Customer } from '../types.ts';
+import type { RoznamchaEntry, KataTransaction, KataSummary, StockEntry, Customer } from '../types.ts';
 
 // Helper to update kata summary
 const updateKataSummary = (customerId: number) => {
@@ -497,6 +497,11 @@ export const settings = {
   getAll: () => {
     return safeQuery((db) => {
       return db.prepare('SELECT * FROM settings').all();
+    });
+  },
+  delete: (key: string) => {
+    return safeQuery((db) => {
+      return db.prepare('DELETE FROM settings WHERE key = ?').run(key);
     });
   }
 };

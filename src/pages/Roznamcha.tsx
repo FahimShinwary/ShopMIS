@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertPersianDigits } from '../lib/utils';
 import { formatShamsi, isDateInRange, getTodayShamsi } from '../lib/shamsi';
 import { RoznamchaEntry, Customer } from '../types';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 import CustomerSelect from '../components/CustomerSelect';
 import { ShamsiDatePicker } from '../components/ShamsiDatePicker';
 import NumericInput from '../components/NumericInput';
@@ -148,57 +148,58 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
     const reportTitle = `${t.roznamcha || 'Roznamcha'} ${t.report || 'Report'}`;
     const dateText = `${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : (t.all || 'All')} ${t.to || 'to'} ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : formatShamsi(new Date(), 'full')}`;
 
-    const contentHtml = `
-      <div class="header">
-        <h1>${reportTitle}</h1>
-        <p>${dateText}</p>
-      </div>
-      
+    const summaryHtml = `
       <div class="summary-grid">
         <div class="summary-card">
           <h3>${t.total_income || 'Total Income'}</h3>
-          <p class="badge-income">${totals.income.toLocaleString()}</p>
+          <p class="badge-income">${totals.income.toLocaleString()} AFN</p>
         </div>
         <div class="summary-card">
           <h3>${t.total_expense || 'Total Expense'}</h3>
-          <p class="badge-expense">${totals.expense.toLocaleString()}</p>
+          <p class="badge-expense">${totals.expense.toLocaleString()} AFN</p>
+        </div>
+        <div class="summary-card">
+          <h3>Net Balance</h3>
+          <p class="${(totals.income - totals.expense) >= 0 ? 'badge-income' : 'badge-expense'}">${(totals.income - totals.expense).toLocaleString()} AFN</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Records</h3>
+          <p style="color: #0f172a;">${filtered.length}</p>
         </div>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>${t.date || 'Date'}</th>
-            <th>${t.customer_name || t.customers || 'Customer Name'}</th>
-            <th>${t.type || 'Type'}</th>
-            <th>${t.currency || 'Currency'}</th>
-            <th>${t.amount || 'Amount'}</th>
-            <th>${t.bill_number || 'Bill #'}</th>
-            <th>${t.description || 'Description'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filtered.map(e => `
-            <tr>
-              <td>
-                <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-                <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-              </td>
-              <td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
-              <td><strong>${e.currency || 'AFN'}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
-              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div class="footer">
-        <p>Generated on ${formatShamsi(new Date(), 'full')} | USA: ${format(new Date(), 'yyyy-MM-dd')} | Shop MIS System</p>
-      </div>
     `;
+
+    const contentHtml = createPaginatedReportHtml<RoznamchaEntry>({
+      title: reportTitle,
+      dateText,
+      summaryHtml,
+      records: filtered,
+      recordsPerPage: 15,
+      isRTL,
+      columns: [
+        { header: t.date || 'Date' },
+        { header: t.customer_name || t.customers || 'Customer Name' },
+        { header: t.type || 'Type' },
+        { header: t.currency || 'Currency' },
+        { header: t.amount || 'Amount' },
+        { header: t.bill_number || 'Bill #' },
+        { header: t.description || 'Description' }
+      ],
+      renderRow: (e: RoznamchaEntry) => `
+        <tr>
+          <td>
+            <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+          </td>
+          <td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
+          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
+          <td><strong>${e.currency || 'AFN'}</strong></td>
+          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
+          <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+          <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+        </tr>
+      `
+    });
 
     return {
       title: reportTitle,

@@ -273,6 +273,22 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
         q = 'DELETE FROM roznamcha WHERE id NOT IN (SELECT MIN(id) FROM roznamcha GROUP BY date, type, amount, description, bill_number, customer_id)';
       } else if (tool === 'reset_admin') {
         q = "UPDATE users SET password = 'NewCode@ShopMIS' WHERE role = 'admin' OR id = 1";
+      } else if (tool === 'reset_license') {
+        if (!confirm('Lock app and show Activation License Window?')) {
+          setIsExecuting(false);
+          return;
+        }
+        localStorage.removeItem('shop_mis_license');
+        if (window.electronAPI) {
+          await window.electronAPI.executeRaw("DELETE FROM settings WHERE key IN ('system_license', 'license_activation_date')");
+        } else {
+          await fetch('/api/license/deactivate', { method: 'POST' });
+        }
+        onNotify?.('License reset! Showing activation window...', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+        return;
       } else if (tool === 'wipe_data') {
         if (!confirm('WIPE ALL DATA? This will permanently delete all transactions, logs, customers, and inventory. This cannot be undone!')) {
           setIsExecuting(false);
@@ -446,6 +462,13 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">License Status</p>
                   <p className="text-4xl font-black mt-1">{systemStatus?.remaining || 'N/A'}</p>
                 </div>
+                <button
+                  onClick={() => handleQuickTool('reset_license')}
+                  className="w-full mt-2 text-xs py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Key size={14} />
+                  Test Activation Screen
+                </button>
               </div>
             </div>
 

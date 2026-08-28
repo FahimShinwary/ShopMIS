@@ -482,6 +482,17 @@ async function startServer() {
     }
   });
 
+  apiRouter.post('/license/deactivate', (req, res) => {
+    try {
+      crud.settings.delete('system_license');
+      crud.settings.delete('license_activation_date');
+      res.json({ success: true, message: 'System license deactivated successfully' });
+    } catch (error) {
+      console.error('License deactivation error:', error);
+      res.status(500).json({ error: 'Failed to deactivate license' });
+    }
+  });
+
   // Backup & Restore
   apiRouter.get('/backup', async (req, res) => {
     try {

@@ -1,5 +1,4 @@
-import * as jalaaliModule from 'jalaali-js';
-const jalaali = (jalaaliModule as any).default || jalaaliModule;
+import { toJalaali, toGregorian, jalaaliMonthLength } from 'jalaali-js';
 
 export const AFGHAN_MONTHS = {
   en: [
@@ -43,7 +42,7 @@ export function gregorianToShamsi(dateInput?: Date | string | number | null): Sh
   const gm = d.getMonth() + 1;
   const gd = d.getDate();
 
-  const j = jalaali.toJalaali(gy, gm, gd);
+  const j = toJalaali(gy, gm, gd);
   return { jy: j.jy, jm: j.jm, jd: j.jd };
 }
 
@@ -55,7 +54,7 @@ export function shamsiToGregorian(jy: number, jm: number, jd: number): Date {
   const safeJm = Math.max(1, Math.min(12, jm || 1));
   const safeJd = Math.max(1, Math.min(31, jd || 1));
 
-  const g = jalaali.toGregorian(safeJy, safeJm, safeJd);
+  const g = toGregorian(safeJy, safeJm, safeJd);
   return new Date(g.gy, g.gm - 1, g.gd, 12, 0, 0); // Noon to avoid timezone boundary shifts
 }
 
@@ -180,7 +179,7 @@ export function getShamsiStartOfYear(date: Date = new Date()): string {
  * Get number of days in a given Shamsi month
  */
 export function getShamsiMonthDays(jy: number, jm: number): number {
-  return jalaali.jalaaliMonthLength(jy, jm);
+  return jalaaliMonthLength(jy, jm);
 }
 
 /**

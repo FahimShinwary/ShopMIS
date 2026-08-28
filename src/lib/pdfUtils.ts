@@ -43,6 +43,8 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
 
   .pdf-report-root, 
   .pdf-container, 
+  .pdf-pages-wrapper,
+  .pdf-page,
   table, 
   thead,
   tbody,
@@ -71,7 +73,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   ${isRTL ? `
-  .pdf-report-root, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
+  .pdf-report-root, .pdf-container, .pdf-page, table, th, td, h1, h2, h3, h4, p, div, span {
     direction: rtl !important;
     text-align: right !important;
     unicode-bidi: plaintext;
@@ -81,7 +83,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .footer { text-align: center !important; }
   .footer p { text-align: center !important; }
   ` : `
-  .pdf-report-root, .pdf-container, table, th, td, h1, h2, h3, h4, p, div, span {
+  .pdf-report-root, .pdf-container, .pdf-page, table, th, td, h1, h2, h3, h4, p, div, span {
     direction: ltr !important;
     text-align: left !important;
   }
@@ -91,24 +93,52 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .footer p { text-align: center !important; }
   `}
 
+  .pdf-pages-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .pdf-page {
+    width: 794px;
+    min-height: 1100px;
+    background: #ffffff;
+    padding: 30px 34px 24px 34px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .pdf-page-content {
+    flex: 1 0 auto;
+    width: 100%;
+  }
+
   .header {
     text-align: center !important;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     border-bottom: 2px solid #0f172a;
-    padding-bottom: 12px;
+    padding-bottom: 10px;
   }
   .header h1 {
     margin: 0 0 4px 0;
     color: #0f172a;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
     line-height: 1.3;
     letter-spacing: normal !important;
   }
   .header h2 {
-    margin: 4px 0;
+    margin: 3px 0;
     color: #1e293b;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1.3;
     letter-spacing: normal !important;
@@ -116,7 +146,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .header p {
     margin: 0;
     color: #475569;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: normal !important;
   }
@@ -124,25 +154,25 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 8px;
+    margin-bottom: 14px;
   }
   .summary-card {
     border: 1px solid #cbd5e1;
     background-color: #f8fafc;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 8px;
   }
   .summary-card h3 {
     margin: 0;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     color: #475569;
     letter-spacing: normal !important;
   }
   .summary-card p {
-    margin: 3px 0 0;
-    font-size: 14px;
+    margin: 2px 0 0;
+    font-size: 13px;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.3;
@@ -152,17 +182,17 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 14px;
-    margin-bottom: 14px;
+    margin-top: 10px;
+    margin-bottom: 10px;
     background-color: #ffffff;
     letter-spacing: normal !important;
   }
   
   th, td {
     border: 1px solid #cbd5e1;
-    padding: 8px 10px;
+    padding: 7px 9px;
     font-size: 11px;
-    line-height: 1.45;
+    line-height: 1.4;
     color: #0f172a;
     vertical-align: middle;
     text-align: ${isRTL ? 'right' : 'left'} !important;
@@ -201,14 +231,18 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-weight: 800;
   }
 
-  .footer {
-    margin-top: 28px;
+  .footer, .pdf-page .footer {
+    flex-shrink: 0;
+    margin-top: 16px;
     text-align: center !important;
-    font-size: 11px;
+    font-size: 10px;
     color: #64748b;
     border-top: 1px solid #cbd5e1;
-    padding-top: 12px;
+    padding-top: 8px;
     letter-spacing: normal !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   @media print {
@@ -221,11 +255,190 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     }
     .pdf-wrapper { padding: 0 !important; display: block !important; }
     .pdf-container { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
-    @page { size: A4 portrait; margin: 10mm; }
+    .pdf-pages-wrapper { gap: 0 !important; display: block !important; width: 100% !important; }
+    .pdf-page {
+      border: none !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      padding: 10mm 12mm !important;
+      margin: 0 !important;
+      width: 100% !important;
+      min-height: 277mm !important;
+      height: 277mm !important;
+      max-height: 277mm !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      box-sizing: border-box !important;
+    }
+    .pdf-page:last-child {
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+    @page { size: A4 portrait; margin: 0; }
     tr { page-break-inside: avoid; }
     thead { display: table-header-group; }
   }
 `;
+
+export interface ColumnDef {
+  header: string;
+  className?: string;
+  style?: string;
+}
+
+export interface PaginatedReportOptions<T> {
+  title: string;
+  subtitle?: string;
+  dateText?: string;
+  shopName?: string;
+  shopAddress?: string;
+  summaryHtml?: string;
+  columns: (ColumnDef | string)[];
+  records: T[];
+  recordsPerPage?: number; // 15 records per A4 page
+  renderRow: (record: T, indexInPage: number, globalIndex: number) => string;
+  emptyMessage?: string;
+  isRTL?: boolean;
+  footerNote?: string;
+}
+
+/**
+ * Utility to chunk any dataset into slices of 15 records per A4 page.
+ */
+export function chunkArray<T>(items: T[], chunkSize: number = 15): T[][] {
+  if (!items || items.length === 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    result.push(items.slice(i, i + chunkSize));
+  }
+  return result;
+}
+
+/**
+ * Generates an A4 print-ready, multi-page HTML report with exactly 15 records per page,
+ * consistent header information, summary widgets on page 1, and official page numbers.
+ */
+export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>): string {
+  const {
+    title,
+    subtitle,
+    dateText,
+    shopName,
+    shopAddress,
+    summaryHtml,
+    columns,
+    records,
+    recordsPerPage = 15,
+    renderRow,
+    emptyMessage = 'No records found',
+    isRTL = true,
+    footerNote = 'Shop MIS System'
+  } = options;
+
+  const pageSize = recordsPerPage || 15;
+  const chunks = chunkArray(records, pageSize);
+  const totalPages = Math.max(1, chunks.length);
+  const now = new Date();
+  const dateStr = `${formatShamsi(now, 'full')} | USA: ${now.toISOString().split('T')[0]}`;
+
+  const normalizedCols: ColumnDef[] = columns.map(c => 
+    typeof c === 'string' ? { header: c } : c
+  );
+
+  const tableHeaderHtml = `
+    <thead>
+      <tr>
+        ${normalizedCols.map(c => `
+          <th class="${c.className || ''}" style="${c.style || ''}">${c.header}</th>
+        `).join('')}
+      </tr>
+    </thead>
+  `;
+
+  if (chunks.length === 0) {
+    return `
+      <div class="pdf-pages-wrapper">
+        <div class="pdf-page">
+          <div class="pdf-page-content">
+            <div class="header">
+              ${shopName ? `<h1 style="font-size: 22px; margin-bottom: 2px;">${shopName}</h1>` : ''}
+              ${shopAddress ? `<p style="margin-bottom: 6px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
+              <h1>${title}</h1>
+              ${subtitle ? `<h2>${subtitle}</h2>` : ''}
+              <p>${dateText || dateStr}</p>
+            </div>
+
+            ${summaryHtml ? summaryHtml : ''}
+
+            <table>
+              ${tableHeaderHtml}
+              <tbody>
+                <tr>
+                  <td colspan="${normalizedCols.length}" class="text-center" style="padding: 24px; color: #64748b; font-weight: bold;">
+                    ${emptyMessage}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="footer">
+            <span>${footerNote}</span>
+            <span>${isRTL ? `پاڼه ۱ له ۱` : `Page 1 of 1`}</span>
+            <span>${dateStr}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const pagesHtml = chunks.map((chunk, pageIndex) => {
+    const pageNumber = pageIndex + 1;
+    const isFirstPage = pageIndex === 0;
+
+    const rowsHtml = chunk.map((record, indexInPage) => {
+      const globalIndex = (pageIndex * pageSize) + indexInPage;
+      return renderRow(record, indexInPage, globalIndex);
+    }).join('');
+
+    return `
+      <div class="pdf-page" data-page="${pageNumber}">
+        <div class="pdf-page-content">
+          <div class="header">
+            ${shopName && isFirstPage ? `<h1 style="font-size: 22px; margin-bottom: 2px;">${shopName}</h1>` : ''}
+            ${shopAddress && isFirstPage ? `<p style="margin-bottom: 6px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
+            <h1>${title}</h1>
+            ${subtitle ? `<h2>${subtitle}</h2>` : ''}
+            <p>${dateText || dateStr}</p>
+          </div>
+
+          ${isFirstPage && summaryHtml ? summaryHtml : ''}
+
+          <table>
+            ${tableHeaderHtml}
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <span>${footerNote}</span>
+          <span style="font-weight: 700;">${isRTL ? `پاڼه ${pageNumber} له ${totalPages}` : `Page ${pageNumber} of ${totalPages}`}</span>
+          <span>${dateStr}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="pdf-pages-wrapper">
+      ${pagesHtml}
+    </div>
+  `;
+}
 
 export const getStandardPrintHtml = (
   contentHtml: string,
@@ -297,15 +510,16 @@ export const getStandardPrintHtml = (
           padding: 24px;
           display: flex;
           justify-content: center;
+          background: #f1f5f9;
         }
         .pdf-container {
-          background: #ffffff;
-          padding: 32px 36px;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+          background: transparent;
+          padding: 0;
+          border-radius: 0;
+          border: none;
+          box-shadow: none;
           width: 100%;
-          max-width: 900px;
+          max-width: 820px;
         }
       </style>
     </head>
@@ -314,7 +528,7 @@ export const getStandardPrintHtml = (
         <div>
           <div class="title">${title}</div>
           <div class="hint-text">
-            ${isRTL ? '💡 د چاپ او PDF په توګه د ثبتولو لپاره لاندې تڼۍ کېکاږئ' : '💡 Click Print to print or Save as PDF with crystal clarity'}
+            ${isRTL ? '💡 د چاپ او 15 ریکارډه په هره A4 پاڼه کې ثبتولو لپاره لاندې تڼۍ کېکاږئ' : '💡 Click Print to print or Save as PDF (15 records per A4 page)'}
           </div>
         </div>
         <div class="btn-group">
@@ -417,12 +631,10 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
 
 /**
  * High-Definition Direct PDF Download using html2canvas-pro + jsPDF
- * - Renders in high z-index overlay so html2canvas captures 100% of text and tables
- * - Handles modern CSS colors (oklch, oklab, lch) seamlessly via html2canvas-pro
- * - Guarantees fully connected cursive Pashto ligatures across all fields (Customer Name, Bill #, Description, Amount, etc.)
+ * - Renders each 15-record page separately for clean, exact A4 page formatting
  * - Scale 2.2 for 300 DPI Ultra-HD print sharpness (~1,800px width)
- * - JPEG 0.92 stream compression yielding ~200-400 KB compact file size with crisp glyphs
- * - Multi-page pagination when dataset is long
+ * - Guarantees fully connected cursive Pashto ligatures across all fields
+ * - Compresses output with high visual fidelity
  */
 export async function downloadPDFDirectly(options: PDFReportOptions): Promise<void> {
   const { title, filename, contentHtml, isRTL = true } = options;
@@ -437,7 +649,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
     }
   }
 
-  // 2. High z-index container so dark app backgrounds don't occlude or blank the canvas capture
+  // 2. High z-index container
   const container = document.createElement('div');
   container.id = 'temp-pdf-export-engine-container';
   container.style.position = 'fixed';
@@ -456,7 +668,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
     <style>
       ${getStandardPrintCss(isRTL)}
     </style>
-    <div class="pdf-report-root" style="background:#ffffff; padding: 24px 28px; width: 100%;">
+    <div class="pdf-report-root" style="background:#ffffff; width: 100%;">
       ${contentHtml}
     </div>
   `;
@@ -464,21 +676,10 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
   document.body.appendChild(container);
 
   // Allow layout and font rendering calculation
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 250));
 
   try {
-    // 3. Ultra-HD Canvas Snapshot using html2canvas-pro at scale 2.2 (~1,800px width)
-    const canvas = await html2canvas(container, {
-      scale: 2.2, // Ultra-HD scale (~1,800px width) matching 300 DPI print standards
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      backgroundColor: '#ffffff'
-    });
-
-    if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      throw new Error('Canvas snapshot failed');
-    }
+    const pageElements = Array.from(container.querySelectorAll('.pdf-page')) as HTMLElement[];
 
     // 4. Initialize jsPDF (A4 portrait) with compression enabled
     const pdf = new jsPDF({
@@ -490,33 +691,69 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
 
     const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
-    const margin = 10; // 10mm margins
+    const margin = 8; // 8mm margins
     const printableWidth = pageWidth - (margin * 2);
     const printableHeight = pageHeight - (margin * 2);
 
-    // Canvas dimensions converted to mm
-    const imgWidth = printableWidth;
-    const imgHeight = (canvas.height * printableWidth) / canvas.width;
+    if (pageElements.length > 0) {
+      // Clean page-by-page rendering for 15 records per A4 sheet
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2.2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
 
-    // 5. Optimized Stream Compression: JPEG 0.92 quality (reduces size to ~200-400KB with sharp typography)
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        if (!canvas || canvas.width === 0 || canvas.height === 0) {
+          continue;
+        }
 
-    if (imgHeight <= printableHeight) {
-      // Single Page Output
-      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const imgHeight = (canvas.height * printableWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        const renderHeight = Math.min(imgHeight, printableHeight);
+        pdf.addImage(imgData, 'JPEG', margin, margin, printableWidth, renderHeight, undefined, 'FAST');
+      }
     } else {
-      // Multi-Page Output with vertical slicing
-      let heightLeft = imgHeight;
-      let position = margin;
+      // Fallback for single document / unpaginated HTML
+      const canvas = await html2canvas(container, {
+        scale: 2.2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
 
-      pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= printableHeight;
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas snapshot failed');
+      }
 
-      while (heightLeft > 0) {
-        position = position - printableHeight;
-        pdf.addPage();
+      const imgWidth = printableWidth;
+      const imgHeight = (canvas.height * printableWidth) / canvas.width;
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+      if (imgHeight <= printableHeight) {
+        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+      } else {
+        let heightLeft = imgHeight;
+        let position = margin;
+
         pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= printableHeight;
+
+        while (heightLeft > 0) {
+          position = position - printableHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+          heightLeft -= printableHeight;
+        }
       }
     }
 

@@ -33,7 +33,7 @@ import {
   isDateInRange
 } from '../lib/shamsi';
 import { RoznamchaEntry, KataTransaction, KataSummary, StockEntry, Customer, Currency } from '../types';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 
 interface ReportsProps {
   roznamchaData: RoznamchaEntry[];
@@ -389,17 +389,10 @@ export default function Reports({
   const buildReportHtml = () => {
     const isRTL = document.documentElement.dir === 'rtl';
     const dateRangeLabel = `${startDate ? formatShamsi(startDate, 'full') : (t.all_time || 'All Time')} ${t.to || 'to'} ${endDate ? formatShamsi(endDate, 'full') : formatShamsi(todayStr, 'full')}`;
-    const title = `${t.reports || 'Report'} - ${shopName}`;
+    const reportTitle = `${t.reports || 'Report'} - ${shopName}`;
 
-    let contentHtml = `
-      <div class="header">
-        <h1>${shopName}</h1>
-        <p style="margin-top:2px; font-size:12px; color:#64748b;">${shopAddress}</p>
-        <h2 style="margin-top:12px; font-size:18px; color:#0f172a;">${t.reports || 'Date Range Report'}</h2>
-        <p style="margin-top:4px; font-weight:600; color:#475569;">${t.date_range || 'Date Range'}: ${dateRangeLabel}</p>
-      </div>
-
-      <div style="margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+    const summaryGridHtml = `
+      <div style="margin-bottom:16px; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
         ${['AFN', 'USD', 'EUR', 'PKR'].map(curr => {
           const tot = totalsByCurrency[curr];
           if (!tot || (tot.income === 0 && tot.expense === 0)) return '';
@@ -415,177 +408,159 @@ export default function Reports({
       </div>
     `;
 
-    if (activeReportTab === 'financial' || activeReportTab === 'roznamcha') {
-      contentHtml += `
-        <h3 style="margin-top: 24px; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${t.roznamcha_report || 'Roznamcha Transactions'} (${filteredRoznamcha.length})
-        </h3>
-        <table>
-          <thead>
+    let contentHtml = '';
+
+    if (activeReportTab === 'roznamcha') {
+      contentHtml = createPaginatedReportHtml<RoznamchaEntry>({
+        title: `${t.roznamcha_report || 'Roznamcha Transactions'}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: summaryGridHtml,
+        records: filteredRoznamcha,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: t.date || 'Date' },
+          { header: t.customer_name || 'Customer Name' },
+          { header: t.type || 'Type' },
+          { header: t.currency || 'Currency' },
+          { header: t.amount || 'Amount' },
+          { header: t.bill_number || 'Bill #' },
+          { header: t.description || 'Description' }
+        ],
+        renderRow: (e: RoznamchaEntry) => {
+          const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
+          const curr = e.currency || 'AFN';
+          return `
             <tr>
-              <th>${t.date || 'Date'}</th>
-              <th>${t.customer_name || 'Customer Name'}</th>
-              <th>${t.type || 'Type'}</th>
-              <th>${t.currency || 'Currency'}</th>
-              <th>${t.amount || 'Amount'}</th>
-              <th>${t.bill_number || 'Bill #'}</th>
-              <th>${t.description || 'Description'}</th>
+              <td>
+                <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              </td>
+              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
+              <td><strong>${curr}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
             </tr>
-          </thead>
-          <tbody>
-            ${filteredRoznamcha.length > 0 ? filteredRoznamcha.map(e => {
-              const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
-              const curr = e.currency || 'AFN';
-              return `
-                <tr>
-                  <td>
-                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-                  </td>
-                  <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
-                  <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
-                  <td><strong>${curr}</strong></td>
-                  <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
-                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-                </tr>
-              `;
-            }).join('') : `<tr><td colspan="7" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
-          </tbody>
-        </table>
-      `;
-    }
-
-    if (activeReportTab === 'financial' || activeReportTab === 'kata') {
-      contentHtml += `
-        <h3 style="margin-top: 28px; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${t.kata_report || 'Kata Ledger Transactions'} (${filteredKata.length})
-        </h3>
-        <table>
-          <thead>
+          `;
+        }
+      });
+    } else if (activeReportTab === 'kata') {
+      contentHtml = createPaginatedReportHtml<KataTransaction>({
+        title: `${t.kata_report || 'Kata Ledger Transactions'}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: summaryGridHtml,
+        records: filteredKata,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: t.date || 'Date' },
+          { header: t.customer_name || 'Customer Name' },
+          { header: t.type || 'Type' },
+          { header: t.currency || 'Currency' },
+          { header: t.amount || 'Amount' },
+          { header: t.bill_number || 'Bill #' },
+          { header: t.description || 'Description' }
+        ],
+        renderRow: (e: KataTransaction) => {
+          const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
+          const isPurchase = (e.type as string) === 'debit' || (e.type as string) === 'purchase';
+          const curr = e.currency || 'AFN';
+          return `
             <tr>
-              <th>${t.date || 'Date'}</th>
-              <th>${t.customer_name || 'Customer Name'}</th>
-              <th>${t.type || 'Type'}</th>
-              <th>${t.currency || 'Currency'}</th>
-              <th>${t.amount || 'Amount'}</th>
-              <th>${t.bill_number || 'Bill #'}</th>
-              <th>${t.description || 'Description'}</th>
+              <td>
+                <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              </td>
+              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
+              <td><strong>${curr}</strong></td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
+              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
             </tr>
-          </thead>
-          <tbody>
-            ${filteredKata.length > 0 ? filteredKata.map(e => {
-              const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
-              const isPurchase = (e.type as string) === 'debit' || (e.type as string) === 'purchase';
-              const curr = e.currency || 'AFN';
-              return `
-                <tr>
-                  <td>
-                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-                  </td>
-                  <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
-                  <td><strong>${curr}</strong></td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
-                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-                </tr>
-              `;
-            }).join('') : `<tr><td colspan="7" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
-          </tbody>
-        </table>
-      `;
-    }
-
-    if (activeReportTab === 'stock') {
-      contentHtml += `
-        <h3 style="margin-top: 28px; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${t.stock_report || 'Stock Book Movements'} (${filteredStock.length})
-        </h3>
-        <table>
-          <thead>
+          `;
+        }
+      });
+    } else if (activeReportTab === 'stock') {
+      contentHtml = createPaginatedReportHtml<StockEntry>({
+        title: `${t.stock_report || 'Stock Book Movements'}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        records: filteredStock,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: t.date || 'Date' },
+          { header: t.item_name || 'Item Name' },
+          { header: t.type || 'Type' },
+          { header: t.quantity || 'Quantity' },
+          { header: t.bill_number || 'Bill #' },
+          { header: t.description || 'Description' }
+        ],
+        renderRow: (e: StockEntry) => `
+          <tr>
+            <td>
+              <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+              <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+            </td>
+            <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
+            <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
+            <td>${e.quantity.toLocaleString()}</td>
+            <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+            <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+          </tr>
+        `
+      });
+    } else if (activeReportTab === 'customers') {
+      contentHtml = createPaginatedReportHtml<KataSummary>({
+        title: `${t.customer_balances_report || 'Customer Account Summary'}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        records: filteredCustomerSummaries,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: '#', style: 'width: 40px; text-align: center;' },
+          { header: t.customer_name || 'Name' },
+          { header: t.currency || 'Currency' },
+          { header: t.total_purchase || 'Total Purchases' },
+          { header: t.total_paid || 'Total Paid' },
+          { header: t.remaining_balance || 'Remaining Balance' }
+        ],
+        renderRow: (s: KataSummary, _idx, gIdx) => {
+          const cust = customers.find(c => c.id === s.customer_id);
+          const custName = cust?.name || s.customer_name || 'Unknown';
+          return `
             <tr>
-              <th>${t.date || 'Date'}</th>
-              <th>${t.item_name || 'Item Name'}</th>
-              <th>${t.type || 'Type'}</th>
-              <th>${t.quantity || 'Quantity'}</th>
-              <th>${t.bill_number || 'Bill #'}</th>
-              <th>${t.description || 'Description'}</th>
+              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+              <td><strong style="unicode-bidi:plaintext;">${custName}</strong></td>
+              <td><strong>${s.currency || 'AFN'}</strong></td>
+              <td>${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="badge-income">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${filteredStock.length > 0 ? filteredStock.map(e => `
-              <tr>
-                <td>
-                  <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-                  <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-                </td>
-                <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
-                <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
-                <td>${e.quantity.toLocaleString()}</td>
-                <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-                <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-              </tr>
-            `).join('') : `<tr><td colspan="6" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
-          </tbody>
-        </table>
-      `;
-    }
-
-    if (activeReportTab === 'customers') {
-      contentHtml += `
-        <h3 style="margin-top: 28px; font-size: 15px; font-weight: 700; color: #0f172a;">
-          ${t.customer_balances_report || 'Customer Account Summary'} (${filteredCustomerSummaries.length})
-        </h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px; text-align: center;">#</th>
-              <th>${t.customer_name || 'Name'}</th>
-              <th>${t.currency || 'Currency'}</th>
-              <th>${t.total_purchase || 'Total Purchases'}</th>
-              <th>${t.total_paid || 'Total Paid'}</th>
-              <th>${t.remaining_balance || 'Remaining Balance'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredCustomerSummaries.length > 0 ? filteredCustomerSummaries.map((s, idx) => {
-              const cust = customers.find(c => c.id === s.customer_id);
-              const custName = cust?.name || s.customer_name || 'Unknown';
-              return `
-                <tr>
-                  <td style="text-align: center; color: #64748b; font-weight: bold;">${idx + 1}</td>
-                  <td><strong style="unicode-bidi:plaintext;">${custName}</strong></td>
-                  <td><strong>${s.currency || 'AFN'}</strong></td>
-                  <td>${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
-                  <td class="badge-income">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
-                  <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
-                </tr>
-              `;
-            }).join('') : `<tr><td colspan="6" style="text-align:center;">${t.no_records_range || 'No records found'}</td></tr>`}
-          </tbody>
-        </table>
-      `;
-    }
-
-    if (activeReportTab === 'single_customer' && selectedCustomerObj) {
-      contentHtml = `
-        <div class="header">
-          <h1>${shopName}</h1>
-          <p style="margin-top:2px; font-size:12px; color:#64748b;">${shopAddress}</p>
-          <h2 style="margin-top:12px; font-size:18px; color:#0f172a;">Customer Multi-Currency Account Statement</h2>
-        </div>
-
-        <div style="margin-top:16px; padding:12px; border:1px solid #93c5fd; border-radius:8px; background-color:#eff6ff;">
+          `;
+        }
+      });
+    } else if (activeReportTab === 'single_customer' && selectedCustomerObj) {
+      const customerHeaderSummary = `
+        <div style="margin-bottom:16px; padding:12px; border:1px solid #93c5fd; border-radius:8px; background-color:#eff6ff;">
           <h2 style="margin:0; font-size:16px; color:#1e40af;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
           <p style="margin:4px 0 0 0; font-size:12px; color:#475569;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
         </div>
 
-        <h3 style="margin-top: 20px; font-size: 14px; font-weight: 700; color: #0f172a;">
+        <h3 style="margin-top: 14px; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #0f172a;">
           Account Balances across All Currencies
         </h3>
-        <table style="margin-top:8px;">
+        <table style="margin-bottom:16px;">
           <thead>
             <tr>
               <th>Currency</th>
@@ -609,52 +584,86 @@ export default function Reports({
             }).join('')}
           </tbody>
         </table>
-
-        <h3 style="margin-top: 24px; font-size: 14px; font-weight: 700; color: #0f172a;">
-          Complete Transaction Statement (${singleCustomerTransactions.length})
-        </h3>
-        <table>
-          <thead>
-            <tr>
-              <th>${t.date || 'Date'}</th>
-              <th>${t.type || 'Type'}</th>
-              <th>${t.currency || 'Currency'}</th>
-              <th>${t.amount || 'Amount'}</th>
-              <th>${t.bill_number || 'Bill #'}</th>
-              <th>${t.description || 'Description'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${singleCustomerTransactions.length > 0 ? singleCustomerTransactions.map(e => {
-              const isPurchase = (e.type as string) === 'purchase' || (e.type as string) === 'debit';
-              const curr = e.currency || 'AFN';
-              return `
-                <tr>
-                  <td>
-                    <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-                    <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
-                  </td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-                  <td><strong>${curr}</strong></td>
-                  <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
-                  <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-                  <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
-                </tr>
-              `;
-            }).join('') : `<tr><td colspan="6" style="text-align:center;">No records found</td></tr>`}
-          </tbody>
-        </table>
       `;
+
+      contentHtml = createPaginatedReportHtml<KataTransaction>({
+        title: `Customer Statement - ${selectedCustomerObj.name}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: customerHeaderSummary,
+        records: singleCustomerTransactions,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: t.date || 'Date' },
+          { header: t.type || 'Type' },
+          { header: t.currency || 'Currency' },
+          { header: t.amount || 'Amount' },
+          { header: t.bill_number || 'Bill #' },
+          { header: t.description || 'Description' }
+        ],
+        renderRow: (e: KataTransaction) => {
+          const isPurchase = (e.type as string) === 'purchase' || (e.type as string) === 'debit';
+          const curr = e.currency || 'AFN';
+          return `
+            <tr>
+              <td>
+                <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              </td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
+              <td><strong>${curr}</strong></td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}">${e.amount.toLocaleString()} ${curr}</td>
+              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+            </tr>
+          `;
+        }
+      });
+    } else {
+      // Default: Financial Comprehensive Overview (paginated on Roznamcha)
+      contentHtml = createPaginatedReportHtml<RoznamchaEntry>({
+        title: `${t.reports || 'Comprehensive Financial Report'}`,
+        subtitle: shopName,
+        shopAddress,
+        dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: summaryGridHtml,
+        records: filteredRoznamcha,
+        recordsPerPage: 15,
+        isRTL,
+        columns: [
+          { header: t.date || 'Date' },
+          { header: t.customer_name || 'Customer Name' },
+          { header: t.type || 'Type' },
+          { header: t.currency || 'Currency' },
+          { header: t.amount || 'Amount' },
+          { header: t.bill_number || 'Bill #' },
+          { header: t.description || 'Description' }
+        ],
+        renderRow: (e: RoznamchaEntry) => {
+          const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
+          const curr = e.currency || 'AFN';
+          return `
+            <tr>
+              <td>
+                <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
+                <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              </td>
+              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
+              <td><strong>${curr}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+            </tr>
+          `;
+        }
+      });
     }
 
-    contentHtml += `
-      <div class="footer" style="margin-top: 30px;">
-        <p>Report Generated on ${formatShamsi(new Date(), 'full')} | ${shopName} MIS</p>
-      </div>
-    `;
-
     return {
-      title,
+      title: reportTitle,
       filename: `report_${startDate || 'all'}_to_${endDate || 'all'}.pdf`,
       contentHtml,
       isRTL

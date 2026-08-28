@@ -19,7 +19,7 @@ import {
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { cn } from '../lib/utils';
-import { openPrintablePDFWindow, exportToPDF } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 import { 
   RoznamchaEntry, 
   Customer, 
@@ -338,20 +338,15 @@ export default function Backup({
     const totalIncome = roznamcha.filter(r => r.type === 'income').reduce((acc, c) => acc + c.amount, 0);
     const totalExpense = roznamcha.filter(r => r.type === 'expense').reduce((acc, c) => acc + c.amount, 0);
 
-    const contentHtml = `
-      <div class="header">
-        <h1>${shopInfo?.name || 'Shop MIS'} - Full System Report</h1>
-        <p>Generated on ${new Date().toLocaleDateString()} | Admin Backup Report</p>
-      </div>
-
+    const summaryHtml = `
       <div class="summary-grid">
         <div class="summary-card">
           <h3>Total Income</h3>
-          <p class="badge-income">${totalIncome.toLocaleString()}</p>
+          <p class="badge-income">${totalIncome.toLocaleString()} AFN</p>
         </div>
         <div class="summary-card">
           <h3>Total Expense</h3>
-          <p class="badge-expense">${totalExpense.toLocaleString()}</p>
+          <p class="badge-expense">${totalExpense.toLocaleString()} AFN</p>
         </div>
         <div class="summary-card">
           <h3>Total Customers</h3>
@@ -362,57 +357,33 @@ export default function Backup({
           <p>${stock.length}</p>
         </div>
       </div>
-
-      <h3 style="margin-top: 24px; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase;">Recent Cashbook (Roznamcha)</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>Bill #</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${roznamcha.slice(0, 15).map(r => `
-            <tr>
-              <td>${r.date}</td>
-              <td class="${r.type === 'income' ? 'badge-income' : 'badge-expense'}">${r.type}</td>
-              <td class="${r.type === 'income' ? 'badge-income' : 'badge-expense'}">${r.amount.toLocaleString()}</td>
-              <td>${r.bill_number || '-'}</td>
-              <td>${r.description}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <h3 style="margin-top: 28px; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase;">Customer Directory</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Address</th>
-            <th>Contact</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${customers.map(c => `
-            <tr>
-              <td>${c.id}</td>
-              <td>${c.name}</td>
-              <td>${c.address || '-'}</td>
-              <td>${c.contact || '-'}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div class="footer">
-        <p>Official Shop MIS Database Export PDF | ${shopInfo?.address || ''}</p>
-      </div>
     `;
+
+    const contentHtml = createPaginatedReportHtml({
+      title: `${shopInfo?.name || 'Shop MIS'} - Full System Report`,
+      shopAddress: shopInfo?.address || '',
+      dateText: `Generated on ${new Date().toLocaleDateString()} | Admin Backup Report`,
+      summaryHtml,
+      records: roznamcha,
+      recordsPerPage: 15,
+      isRTL: true,
+      columns: [
+        { header: 'Date' },
+        { header: 'Type' },
+        { header: 'Amount' },
+        { header: 'Bill #' },
+        { header: 'Description' }
+      ],
+      renderRow: (r) => `
+        <tr>
+          <td>${r.date}</td>
+          <td class="${r.type === 'income' ? 'badge-income' : 'badge-expense'}">${r.type}</td>
+          <td class="${r.type === 'income' ? 'badge-income' : 'badge-expense'}">${r.amount.toLocaleString()}</td>
+          <td>${r.bill_number || '-'}</td>
+          <td>${r.description || '-'}</td>
+        </tr>
+      `
+    });
 
     return {
       title: `${shopInfo?.name || 'Shop'} System Report`,
