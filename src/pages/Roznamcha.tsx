@@ -174,9 +174,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       dateText,
       summaryHtml,
       records: filtered,
-      recordsPerPage: 20,
       isRTL,
       columns: [
+        { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
         { header: t.date || 'Date' },
         { header: t.customer_name || t.customers || 'Customer Name' },
         { header: t.type || 'Type' },
@@ -185,8 +185,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
         { header: t.bill_number || 'Bill #' },
         { header: t.description || 'Description' }
       ],
-      renderRow: (e: RoznamchaEntry) => `
+      renderRow: (e: RoznamchaEntry, _idx: number, globalIndex: number) => `
         <tr>
+          <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
           <td>
             <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
             <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -525,6 +526,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
           <table className="w-full text-start border-collapse">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
+                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-start w-12">
+                  {t.record_no || 'No.'}
+                </th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-start">
                   <div className="flex items-center gap-2">
                     <Calendar size={14} />
@@ -581,6 +585,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
                   transition={{ delay: index * 0.03 }}
                   className="hover:bg-muted/30 transition-colors group"
                 >
+                  <td className="p-4 text-xs font-mono font-bold text-muted-foreground">
+                    #{(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
                   <td className="p-4 text-sm font-medium">
                     <div className="font-bold text-foreground">☀️ {formatShamsi(entry.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(entry.date, 'full')})</span></div>
                     <div className="text-[11px] text-brand-500 font-mono font-bold">📅 USA: {format(new Date(entry.date), 'yyyy-MM-dd')}</div>

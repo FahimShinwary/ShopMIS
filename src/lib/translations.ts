@@ -145,7 +145,10 @@ export const translations = {
     pkr: 'PKR (₨) (کلدار)',
     solar_date: 'Solar Date',
     gregorian_date: 'Gregorian Date',
-    dual_date: 'Solar & Gregorian Date'
+    dual_date: 'Solar & Gregorian Date',
+    available_stock: 'Available Stock',
+    current_balance: 'Available Stock',
+    record_no: 'No.'
   },
   ps: {
     dashboard: 'ډشبورډ',
@@ -293,7 +296,10 @@ export const translations = {
     pkr: 'کلدارې (PKR ₨)',
     solar_date: 'شمسي نیټه',
     gregorian_date: 'عیسوي نیټه',
-    dual_date: 'شمسي او عیسوي نیټه'
+    dual_date: 'شمسي او عیسوي نیټه',
+    available_stock: 'موجود سټاک',
+    current_balance: 'موجود سټاک',
+    record_no: 'شمېره'
   },
   dr: {
     dashboard: 'داشبورد',
@@ -441,6 +447,9 @@ export const translations = {
     pkr: 'کلدار (PKR ₨)',
     solar_date: 'تاریخ شمسی',
     gregorian_date: 'تاریخ میلادی',
-    dual_date: 'تاریخ شمسی و میلادی'
+    dual_date: 'تاریخ شمسی و میلادی',
+    available_stock: 'ستاک موجود',
+    current_balance: 'ستاک موجود',
+    record_no: 'شماره'
   }
 };

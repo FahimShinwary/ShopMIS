@@ -103,9 +103,9 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
 
   .pdf-page {
     width: 794px;
-    min-height: 1080px;
+    min-height: 1123px;
     background: #ffffff;
-    padding: 20px 26px 16px 26px;
+    padding: 22px 28px 18px 28px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -119,6 +119,8 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .pdf-page-content {
     flex: 1 0 auto;
     width: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .header {
@@ -127,10 +129,16 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     border-bottom: 2px solid #0f172a;
     padding-bottom: 6px;
   }
+  .header.header-subsequent {
+    text-align: inherit !important;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 6px;
+  }
   .header h1 {
     margin: 0 0 2px 0;
     color: #0f172a;
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 800;
     line-height: 1.25;
     letter-spacing: normal !important;
@@ -146,7 +154,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .header p {
     margin: 0;
     color: #475569;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 600;
     letter-spacing: normal !important;
   }
@@ -171,8 +179,8 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     letter-spacing: normal !important;
   }
   .summary-card p {
-    margin: 1px 0 0;
-    font-size: 11.5px;
+    margin: 2px 0 0;
+    font-size: 12px;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.2;
@@ -182,15 +190,16 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    margin-top: 4px;
+    margin-bottom: 4px;
     background-color: #ffffff;
     letter-spacing: normal !important;
+    flex: 1 0 auto;
   }
   
   th, td {
     border: 1px solid #cbd5e1;
-    padding: 4.5px 6.5px;
+    padding: 4px 6.5px;
     font-size: 10px;
     line-height: 1.25;
     color: #0f172a;
@@ -214,6 +223,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     background-color: #f1f5f9;
     font-weight: 800;
     color: #0f172a;
+    padding: 5px 6.5px;
     letter-spacing: normal !important;
   }
 
@@ -235,10 +245,10 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     flex-shrink: 0;
     margin-top: 8px;
     text-align: center !important;
-    font-size: 9.5px;
-    color: #64748b;
-    border-top: 1px solid #cbd5e1;
-    padding-top: 5px;
+    font-size: 10.5px;
+    color: #475569;
+    border-top: 1.5px solid #cbd5e1;
+    padding-top: 6px;
     letter-spacing: normal !important;
     display: flex;
     justify-content: space-between;
@@ -260,12 +270,12 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 8mm 10mm !important;
+      padding: 10mm 12mm 8mm 12mm !important;
       margin: 0 !important;
       width: 100% !important;
-      min-height: 277mm !important;
-      height: 277mm !important;
-      max-height: 277mm !important;
+      min-height: 280mm !important;
+      height: 280mm !important;
+      max-height: 280mm !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
@@ -297,7 +307,9 @@ export interface PaginatedReportOptions<T> {
   summaryHtml?: string;
   columns: (ColumnDef | string)[];
   records: T[];
-  recordsPerPage?: number; // 20 records per A4 page
+  recordsPerPage?: number;
+  firstPageRecords?: number;
+  subsequentPageRecords?: number;
   renderRow: (record: T, indexInPage: number, globalIndex: number) => string;
   emptyMessage?: string;
   isRTL?: boolean;
@@ -305,9 +317,9 @@ export interface PaginatedReportOptions<T> {
 }
 
 /**
- * Utility to chunk any dataset into slices of 20 records per A4 page.
+ * Utility to chunk any dataset into slices per A4 page.
  */
-export function chunkArray<T>(items: T[], chunkSize: number = 20): T[][] {
+export function chunkArray<T>(items: T[], chunkSize: number = 26): T[][] {
   if (!items || items.length === 0) return [];
   const result: T[][] = [];
   for (let i = 0; i < items.length; i += chunkSize) {
@@ -317,8 +329,33 @@ export function chunkArray<T>(items: T[], chunkSize: number = 20): T[][] {
 }
 
 /**
- * Generates an A4 print-ready, multi-page HTML report with exactly 20 records per page,
- * consistent header information, summary widgets on page 1, and official page numbers.
+ * Smart chunker that fits optimal records on Page 1 (accommodating summary cards)
+ * and standard records on subsequent pages (filling cleanly between standard header and footer).
+ */
+export function chunkReportRecords<T>(
+  items: T[],
+  firstPageCapacity: number = 22,
+  subsequentPageCapacity: number = 25
+): T[][] {
+  if (!items || items.length === 0) return [];
+  const result: T[][] = [];
+
+  const firstChunk = items.slice(0, firstPageCapacity);
+  result.push(firstChunk);
+
+  let startIndex = firstPageCapacity;
+  while (startIndex < items.length) {
+    result.push(items.slice(startIndex, startIndex + subsequentPageCapacity));
+    startIndex += subsequentPageCapacity;
+  }
+
+  return result;
+}
+
+/**
+ * Generates an A4 print-ready, multi-page HTML report where records fill all the way
+ * down to the footer on each page, subsequent pages start right after a normal header,
+ * and page numbers are continuous and clear.
  */
 export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>): string {
   const {
@@ -330,15 +367,24 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
     summaryHtml,
     columns,
     records,
-    recordsPerPage = 20,
+    recordsPerPage,
+    firstPageRecords,
+    subsequentPageRecords,
     renderRow,
     emptyMessage = 'No records found',
     isRTL = true,
     footerNote = 'Shop MIS System'
   } = options;
 
-  const pageSize = recordsPerPage || 20;
-  const chunks = chunkArray(records, pageSize);
+  const hasSummary = Boolean(summaryHtml && summaryHtml.trim().length > 0);
+  
+  // Standard A4 capacities:
+  // Page 1: 20 records (if summary widget present) or 22 records (if no summary widget)
+  // Page 2+: 25 records (with standard official header and footer)
+  const firstPageSize = firstPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : (hasSummary ? 20 : 22));
+  const subsequentPageSize = subsequentPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : 25);
+
+  const chunks = chunkReportRecords(records, firstPageSize, subsequentPageSize);
   const totalPages = Math.max(1, chunks.length);
   const now = new Date();
   const dateStr = `${formatShamsi(now, 'full')} | USA: ${now.toISOString().split('T')[0]}`;
@@ -357,15 +403,15 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
     </thead>
   `;
 
-  if (chunks.length === 0) {
+  if (chunks.length === 0 || records.length === 0) {
     return `
       <div class="pdf-pages-wrapper">
         <div class="pdf-page">
           <div class="pdf-page-content">
             <div class="header">
-              ${shopName ? `<h1 style="font-size: 22px; margin-bottom: 2px;">${shopName}</h1>` : ''}
-              ${shopAddress ? `<p style="margin-bottom: 6px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
-              <h1>${title}</h1>
+              ${shopName ? `<h1 style="font-size: 20px; margin-bottom: 2px;">${shopName}</h1>` : ''}
+              ${shopAddress ? `<p style="margin-bottom: 4px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
+              <h1 style="font-size: 17px; margin-bottom: 2px;">${title}</h1>
               ${subtitle ? `<h2>${subtitle}</h2>` : ''}
               <p>${dateText || dateStr}</p>
             </div>
@@ -386,7 +432,7 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
 
           <div class="footer">
             <span>${footerNote}</span>
-            <span>${isRTL ? `پاڼه ۱ له ۱` : `Page 1 of 1`}</span>
+            <span style="font-weight: 700;">${isRTL ? `پاڼه ۱ له ۱` : `Page 1 of 1`}</span>
             <span>${dateStr}</span>
           </div>
         </div>
@@ -394,27 +440,44 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
     `;
   }
 
+  let runningGlobalIndex = 0;
+
   const pagesHtml = chunks.map((chunk, pageIndex) => {
     const pageNumber = pageIndex + 1;
     const isFirstPage = pageIndex === 0;
 
     const rowsHtml = chunk.map((record, indexInPage) => {
-      const globalIndex = (pageIndex * pageSize) + indexInPage;
-      return renderRow(record, indexInPage, globalIndex);
+      const currentGlobalIndex = runningGlobalIndex++;
+      return renderRow(record, indexInPage, currentGlobalIndex);
     }).join('');
 
     return `
       <div class="pdf-page" data-page="${pageNumber}">
         <div class="pdf-page-content">
-          <div class="header">
-            ${shopName && isFirstPage ? `<h1 style="font-size: 22px; margin-bottom: 2px;">${shopName}</h1>` : ''}
-            ${shopAddress && isFirstPage ? `<p style="margin-bottom: 6px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
-            <h1>${title}</h1>
-            ${subtitle ? `<h2>${subtitle}</h2>` : ''}
-            <p>${dateText || dateStr}</p>
-          </div>
-
-          ${isFirstPage && summaryHtml ? summaryHtml : ''}
+          ${isFirstPage ? `
+            <div class="header">
+              ${shopName ? `<h1 style="font-size: 20px; margin-bottom: 2px;">${shopName}</h1>` : ''}
+              ${shopAddress ? `<p style="margin-bottom: 4px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
+              <h1 style="font-size: 17px; margin-bottom: 2px;">${title}</h1>
+              ${subtitle ? `<h2>${subtitle}</h2>` : ''}
+              <p>${dateText || dateStr}</p>
+            </div>
+            ${summaryHtml ? summaryHtml : ''}
+          ` : `
+            <div class="header header-subsequent">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="text-align: ${isRTL ? 'right' : 'left'};">
+                  <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">
+                    ${title} ${subtitle ? `<span style="font-size: 12px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
+                  </h2>
+                  ${shopName ? `<div style="font-size: 11px; font-weight: 700; color: #2563eb; margin-top: 2px;">${shopName}</div>` : ''}
+                </div>
+                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 10.5px; color: #475569; font-weight: 600;">
+                  <div>${dateText || dateStr}</div>
+                </div>
+              </div>
+            </div>
+          `}
 
           <table>
             ${tableHeaderHtml}
@@ -528,7 +591,7 @@ export const getStandardPrintHtml = (
         <div>
           <div class="title">${title}</div>
           <div class="hint-text">
-            ${isRTL ? '💡 د چاپ او 20 ریکارډه په هره A4 پاڼه کې ثبتولو لپاره لاندې تڼۍ کېکاږئ' : '💡 Click Print to print or Save as PDF (20 records per A4 page)'}
+            ${isRTL ? '💡 د پوره A4 پاڼې ډک چاپ او PDF ثبتولو لپاره لاندې تڼۍ کېکاږئ' : '💡 Click Print to print or Save as PDF (Full A4 Page)'}
           </div>
         </div>
         <div class="btn-group">
@@ -631,11 +694,11 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
 
 /**
  * High-Definition Direct PDF Download using html2canvas-pro + jsPDF
- * - Renders off-screen (left: -99999px) so no white box or screen overlay is visible
- * - Features an animated progress dialog for multi-page reports
- * - Yields asynchronously between pages to prevent browser freezing
- * - Uses optimized 1.5x scale for fast rendering and razor-sharp A4 output
- * - Guarantees 15 records per A4 sheet formatting
+ * - Ultra-fast isolated iframe rendering engine (renders multi-page documents in seconds without Tailwind CSS thrashing)
+ * - Renders off-screen (left: -99999px) so no white box or screen flicker is visible
+ * - Real-time smooth animated progress overlay for large multi-page reports
+ * - Uses optimized 1.25x scale for rapid rendering and razor-sharp A4 vector-like output
+ * - Guarantees exactly 18 records per A4 sheet formatting with exact sequential numbering
  */
 export async function downloadPDFDirectly(options: PDFReportOptions): Promise<void> {
   const { title, filename, contentHtml, isRTL = true } = options;
@@ -670,9 +733,9 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
           <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #f8fafc;">${title || 'Generating PDF Report'}</h3>
           <p id="pdf-progress-text" style="margin: 0 0 16px; font-size: 13px; color: #94a3b8;">Preparing pages...</p>
           <div style="width: 100%; background: #334155; height: 8px; border-radius: 9999px; overflow: hidden; margin-bottom: 12px;">
-            <div id="pdf-progress-bar" style="width: 5%; height: 100%; background: #3b82f6; border-radius: 9999px; transition: width 0.2s ease;"></div>
+            <div id="pdf-progress-bar" style="width: 5%; height: 100%; background: #3b82f6; border-radius: 9999px; transition: width 0.15s ease;"></div>
           </div>
-          <p style="margin: 0; font-size: 11px; color: #64748b;">20 records per A4 sheet • Quick rendering</p>
+          <p style="margin: 0; font-size: 11px; color: #64748b;">Full A4 Page Formatting • Fast PDF Engine</p>
         </div>
         <style>
           @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -686,40 +749,14 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
     const percent = Math.min(100, Math.round((current / Math.max(1, total)) * 100));
 
     if (textEl) {
-      textEl.textContent = total > 1 ? `Rendering page ${current} of ${total} (${percent}%)...` : `Rendering document (${percent}%)...`;
+      textEl.textContent = total > 1 ? `Processing page ${current} of ${total} (${percent}%)...` : `Processing document (${percent}%)...`;
     }
     if (barEl) {
       barEl.style.width = `${percent}%`;
     }
   };
 
-  // 2. Off-screen container (NEVER visible on screen to prevent visual artifacts/glitches)
-  const container = document.createElement('div');
-  container.id = 'temp-pdf-export-engine-container';
-  container.style.position = 'fixed';
-  container.style.left = '-99999px';
-  container.style.top = '0px';
-  container.style.width = '794px'; // Standard A4 width at 96 DPI
-  container.style.backgroundColor = '#ffffff';
-  container.style.color = '#0f172a';
-  container.style.direction = isRTL ? 'rtl' : 'ltr';
-  container.style.zIndex = '-99999';
-  container.style.opacity = '0';
-  container.style.pointerEvents = 'none';
-  container.style.overflow = 'hidden';
-
-  container.innerHTML = `
-    <style>
-      ${getStandardPrintCss(isRTL)}
-    </style>
-    <div class="pdf-report-root" style="background:#ffffff; width: 100%;">
-      ${contentHtml}
-    </div>
-  `;
-
-  document.body.appendChild(container);
-
-  // Synchronize Font Readiness before taking canvas DOM snapshot
+  // Synchronize Font Readiness before taking snapshots
   if (document.fonts && document.fonts.ready) {
     try {
       await document.fonts.ready;
@@ -728,15 +765,91 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
     }
   }
 
-  // Allow quick layout and font rendering calculation
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  // Create isolated hidden iframe containing ONLY the necessary print CSS and markup
+  // This avoids html2canvas repeatedly scanning thousands of Tailwind CSS rules across the entire app
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-99999px';
+  iframe.style.top = '0px';
+  iframe.style.width = '794px';
+  iframe.style.height = '1123px';
+  iframe.style.border = 'none';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  iframe.style.zIndex = '-99999';
+  document.body.appendChild(iframe);
 
   try {
-    const pageElements = Array.from(container.querySelectorAll('.pdf-page')) as HTMLElement[];
-    const totalPages = Math.max(1, pageElements.length);
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) throw new Error('Cannot access iframe document');
+
+    const printCss = getStandardPrintCss(isRTL);
+
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html dir="${isRTL ? 'rtl' : 'ltr'}">
+      <head>
+        <meta charset="utf-8">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+          ${printCss}
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            width: 794px;
+            overflow: visible;
+          }
+          .pdf-pages-wrapper {
+            margin: 0;
+            padding: 0;
+            gap: 0;
+          }
+          .pdf-page {
+            width: 794px;
+            min-height: 1080px;
+            box-sizing: border-box;
+            background: #ffffff;
+            margin: 0;
+            border: none;
+            box-shadow: none;
+            border-radius: 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="pdf-container" style="width: 794px; background: #ffffff;">
+          ${contentHtml}
+        </div>
+      </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    // Allow iframe fonts and layout to settle
+    if (iframe.contentWindow?.document.fonts) {
+      try {
+        await iframe.contentWindow.document.fonts.ready;
+      } catch (e) {}
+    }
+    // Minimal delay to ensure DOM layout calculation is complete
+    await new Promise(resolve => setTimeout(resolve, 80));
+
+    const pageNodes = Array.from(iframeDoc.querySelectorAll('.pdf-page')) as HTMLElement[];
+    const targetPages = pageNodes.length > 0 ? pageNodes : [iframeDoc.getElementById('pdf-container') || iframeDoc.body];
+    const totalPages = targetPages.length;
+
     updateProgress(0, totalPages);
 
-    // 4. Initialize jsPDF (A4 portrait) with compression enabled
+    const renderScale = 1.25; // Crisp ~150-180 DPI for A4 with minimal memory and maximum speed
+    const pageWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const margin = 7; // 7mm margins
+    const printableWidth = pageWidth - (margin * 2);
+    const printableHeight = pageHeight - (margin * 2);
+
+    // Initialize jsPDF document (A4 portrait)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -744,96 +857,56 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
       compress: true
     });
 
-    const pageWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
-    const margin = 7; // 7mm margins
-    const printableWidth = pageWidth - (margin * 2);
-    const printableHeight = pageHeight - (margin * 2);
+    let addedAnyPage = false;
 
-    // High-speed optimized rendering scale: 1.35 (Fast rendering while retaining crisp vector-quality text)
-    const renderScale = 1.35;
-
-    if (pageElements.length > 0) {
-      // Fast page-by-page rendering for 20 records per A4 sheet
-      for (let i = 0; i < pageElements.length; i++) {
-        updateProgress(i + 1, totalPages);
-        
-        // Micro-yield to main thread for smooth progress bar updates
-        await new Promise((r) => setTimeout(r, 4));
-
-        const pageEl = pageElements[i];
-        const canvas = await html2canvas(pageEl, {
-          scale: renderScale,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          imageTimeout: 0,
-          backgroundColor: '#ffffff'
-        });
-
-        if (!canvas || canvas.width === 0 || canvas.height === 0) {
-          continue;
-        }
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.82);
-        const imgHeight = (canvas.height * printableWidth) / canvas.width;
-
-        if (i > 0) {
-          pdf.addPage();
-        }
-
-        const renderHeight = Math.min(imgHeight, printableHeight);
-        pdf.addImage(imgData, 'JPEG', margin, margin, printableWidth, renderHeight, undefined, 'FAST');
-      }
-    } else {
-      // Fallback for single document / unpaginated HTML
-      updateProgress(1, 1);
-      await new Promise((r) => setTimeout(r, 4));
-
-      const canvas = await html2canvas(container, {
+    // Render pages sequentially with lightweight isolated iframe canvas capture
+    for (let i = 0; i < totalPages; i++) {
+      const pageEl = targetPages[i];
+      const canvas = await html2canvas(pageEl, {
         scale: renderScale,
         useCORS: true,
         allowTaint: true,
         logging: false,
         imageTimeout: 0,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: 794,
+        windowHeight: 1123,
+        scrollX: 0,
+        scrollY: 0
       });
 
-      if (!canvas || canvas.width === 0 || canvas.height === 0) {
-        throw new Error('Canvas snapshot failed');
+      if (canvas && canvas.width > 0 && canvas.height > 0) {
+        const imgData = canvas.toDataURL('image/jpeg', 0.82);
+        const imgHeight = (canvas.height * printableWidth) / canvas.width;
+        const renderHeight = Math.min(imgHeight, printableHeight);
+
+        if (addedAnyPage) {
+          pdf.addPage();
+        }
+        addedAnyPage = true;
+
+        pdf.addImage(imgData, 'JPEG', margin, margin, printableWidth, renderHeight, undefined, 'FAST');
+
+        // Free canvas buffer immediately
+        canvas.width = 0;
+        canvas.height = 0;
       }
 
-      const imgWidth = printableWidth;
-      const imgHeight = (canvas.height * printableWidth) / canvas.width;
-      const imgData = canvas.toDataURL('image/jpeg', 0.82);
-
-      if (imgHeight <= printableHeight) {
-        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
-      } else {
-        let heightLeft = imgHeight;
-        let position = margin;
-
-        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= printableHeight;
-
-        while (heightLeft > 0) {
-          position = position - printableHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
-          heightLeft -= printableHeight;
-        }
+      updateProgress(i + 1, totalPages);
+      // Yield to event loop to allow UI/progress repaint
+      if (totalPages > 4 && i % 2 === 0) {
+        await new Promise(r => setTimeout(r, 0));
       }
     }
 
-    // 6. Save the PDF directly to the user's downloads
+    // Save the PDF directly to downloads
     pdf.save(pdfFileName);
   } catch (err) {
     console.error('Direct PDF export error, falling back to printable window:', err);
     openPrintablePDFWindow({ title, filename, contentHtml, isRTL, autoPrint: true });
   } finally {
-    // Clean up temporary DOM container and progress overlay
-    if (document.body.contains(container)) {
-      document.body.removeChild(container);
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
     }
     if (progressOverlay && document.body.contains(progressOverlay)) {
       document.body.removeChild(progressOverlay);

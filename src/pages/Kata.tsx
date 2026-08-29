@@ -162,6 +162,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
     ` : '';
 
     const columns = [
+      { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
       { header: t.date || 'Date' },
       ...(!selectedCustomer ? [{ header: t.customer || 'Customer' }] : []),
       { header: t.type || 'Type' },
@@ -176,11 +177,11 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filteredTransactions,
-      recordsPerPage: 20,
       isRTL,
       columns,
-      renderRow: (tx: KataTransaction) => `
+      renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => `
         <tr>
+          <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
           <td>
             <div style="font-weight:700">${formatShamsi(tx.date, 'YYYY/MM/DD')} (${formatShamsi(tx.date, 'full')})</div>
             <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
@@ -454,6 +455,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
             <table className="w-full text-start border-collapse">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
+                  <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start w-12">{t.record_no || 'No.'}</th>
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.date}</th>
                   {!selectedCustomer && <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.customer_name}</th>}
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.type}</th>
@@ -473,6 +475,9 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
                     transition={{ delay: index * 0.02 }}
                     className="hover:bg-muted/30 transition-colors group"
                   >
+                    <td className="p-5 text-xs font-mono font-bold text-muted-foreground">
+                      #{(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
                     <td className="p-5 text-sm font-bold">
                       <div className="font-bold text-foreground">☀️ {formatShamsi(tx.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(tx.date, 'full')})</span></div>
                       <div className="text-[11px] text-brand-500 font-mono font-bold">📅 USA: {format(new Date(tx.date), 'yyyy-MM-dd')}</div>

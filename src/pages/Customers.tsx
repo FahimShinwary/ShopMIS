@@ -56,17 +56,18 @@ export default function Customers({ t, query, customers, onAdd, onEdit, onDelete
       dateText: `${t.total_customers || 'Total Customers'}: ${filteredCustomers.length}`,
       summaryHtml,
       records: filteredCustomers,
-      recordsPerPage: 20,
       isRTL,
       columns: [
-        { header: 'ID', style: 'width: 60px; text-align: center;' },
+        { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
+        { header: 'ID', style: 'width: 50px; text-align: center;' },
         { header: t.customer_name || 'Customer Name' },
         { header: t.address || 'Address' },
         { header: t.contact || 'Contact / Phone' }
       ],
-      renderRow: (c) => `
+      renderRow: (c, _idx, globalIndex) => `
         <tr>
-          <td style="text-align: center; font-weight: 700; color: #64748b;">${c.id}</td>
+          <td style="text-align: center; font-weight: 700; color: #64748b;">${globalIndex + 1}</td>
+          <td style="text-align: center; font-weight: 600; color: #94a3b8;">${c.id}</td>
           <td><strong style="unicode-bidi: plaintext;">${c.name}</strong></td>
           <td><span style="unicode-bidi: plaintext;">${c.address || '-'}</span></td>
           <td><span style="unicode-bidi: plaintext;">${c.contact || '-'}</span></td>

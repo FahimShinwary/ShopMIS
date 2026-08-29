@@ -418,9 +418,9 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredRoznamcha,
-        recordsPerPage: 20,
         isRTL,
         columns: [
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.date || 'Date' },
           { header: t.customer_name || 'Customer Name' },
           { header: t.type || 'Type' },
@@ -429,11 +429,12 @@ export default function Reports({
           { header: t.bill_number || 'Bill #' },
           { header: t.description || 'Description' }
         ],
-        renderRow: (e: RoznamchaEntry) => {
+        renderRow: (e: RoznamchaEntry, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
           const curr = e.currency || 'AFN';
           return `
             <tr>
+              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
               <td>
                 <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
                 <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -456,9 +457,9 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredKata,
-        recordsPerPage: 20,
         isRTL,
         columns: [
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.date || 'Date' },
           { header: t.customer_name || 'Customer Name' },
           { header: t.type || 'Type' },
@@ -467,12 +468,13 @@ export default function Reports({
           { header: t.bill_number || 'Bill #' },
           { header: t.description || 'Description' }
         ],
-        renderRow: (e: KataTransaction) => {
+        renderRow: (e: KataTransaction, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
           const isPurchase = (e.type as string) === 'debit' || (e.type as string) === 'purchase';
           const curr = e.currency || 'AFN';
           return `
             <tr>
+              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
               <td>
                 <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
                 <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -494,9 +496,9 @@ export default function Reports({
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         records: filteredStock,
-        recordsPerPage: 20,
         isRTL,
         columns: [
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.date || 'Date' },
           { header: t.item_name || 'Item Name' },
           { header: t.type || 'Type' },
@@ -504,8 +506,9 @@ export default function Reports({
           { header: t.bill_number || 'Bill #' },
           { header: t.description || 'Description' }
         ],
-        renderRow: (e: StockEntry) => `
+        renderRow: (e: StockEntry, _idx: number, gIdx: number) => `
           <tr>
+            <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
             <td>
               <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
               <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -525,10 +528,9 @@ export default function Reports({
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         records: filteredCustomerSummaries,
-        recordsPerPage: 20,
         isRTL,
         columns: [
-          { header: '#', style: 'width: 40px; text-align: center;' },
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.customer_name || 'Name' },
           { header: t.currency || 'Currency' },
           { header: t.total_purchase || 'Total Purchases' },
@@ -593,9 +595,9 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: customerHeaderSummary,
         records: singleCustomerTransactions,
-        recordsPerPage: 20,
         isRTL,
         columns: [
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.date || 'Date' },
           { header: t.type || 'Type' },
           { header: t.currency || 'Currency' },
@@ -603,11 +605,12 @@ export default function Reports({
           { header: t.bill_number || 'Bill #' },
           { header: t.description || 'Description' }
         ],
-        renderRow: (e: KataTransaction) => {
+        renderRow: (e: KataTransaction, _idx: number, gIdx: number) => {
           const isPurchase = (e.type as string) === 'purchase' || (e.type as string) === 'debit';
           const curr = e.currency || 'AFN';
           return `
             <tr>
+              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
               <td>
                 <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
                 <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -630,9 +633,9 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredRoznamcha,
-        recordsPerPage: 20,
         isRTL,
         columns: [
+          { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
           { header: t.date || 'Date' },
           { header: t.customer_name || 'Customer Name' },
           { header: t.type || 'Type' },
@@ -641,11 +644,12 @@ export default function Reports({
           { header: t.bill_number || 'Bill #' },
           { header: t.description || 'Description' }
         ],
-        renderRow: (e: RoznamchaEntry) => {
+        renderRow: (e: RoznamchaEntry, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
           const curr = e.currency || 'AFN';
           return `
             <tr>
+              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
               <td>
                 <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
                 <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -1090,6 +1094,7 @@ export default function Reports({
               <table className="w-full text-start border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border text-xs font-bold text-muted-foreground uppercase">
+                    <th className="p-3 text-start w-12">{t.record_no || 'No.'}</th>
                     <th className="p-3 text-start">{t.date || 'Date'}</th>
                     <th className="p-3 text-start">{t.customer_name || 'Customer'}</th>
                     <th className="p-3 text-start">{t.type || 'Type'}</th>
@@ -1100,10 +1105,12 @@ export default function Reports({
                 </thead>
                 <tbody className="divide-y divide-border text-sm">
                   {paginatedRoznamcha.length > 0 ? (
-                    paginatedRoznamcha.map(entry => {
+                    paginatedRoznamcha.map((entry, idx) => {
                       const cName = customers.find(c => c.id === entry.customer_id)?.name || '-';
+                      const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
                       return (
                         <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3 text-muted-foreground font-mono font-bold text-xs">#{rowNum}</td>
                           <td className="p-3 text-sm font-medium">
                             <div className="font-bold text-foreground">{formatShamsi(entry.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(entry.date, 'full')})</span></div>
                             <div className="text-[11px] text-brand-500 font-mono font-bold">USA: {format(new Date(entry.date), 'yyyy-MM-dd')}</div>
@@ -1132,7 +1139,7 @@ export default function Reports({
                     })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
                         {t.no_records_range || 'No records found for selected date range.'}
                       </td>
                     </tr>
@@ -1169,6 +1176,7 @@ export default function Reports({
               <table className="w-full text-start border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border text-xs font-bold text-muted-foreground uppercase">
+                    <th className="p-3 text-start w-12">{t.record_no || 'No.'}</th>
                     <th className="p-3 text-start">{t.date || 'Date'}</th>
                     <th className="p-3 text-start">{t.customer_name || 'Customer'}</th>
                     <th className="p-3 text-start">{t.type || 'Type'}</th>
@@ -1179,11 +1187,13 @@ export default function Reports({
                 </thead>
                 <tbody className="divide-y divide-border text-sm">
                   {paginatedKata.length > 0 ? (
-                    paginatedKata.map(entry => {
+                    paginatedKata.map((entry, idx) => {
                       const cName = customers.find(c => c.id === entry.customer_id)?.name || '-';
                       const isPurchase = (entry.type as string) === 'debit' || (entry.type as string) === 'purchase';
+                      const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
                       return (
                         <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3 text-muted-foreground font-mono font-bold text-xs">#{rowNum}</td>
                           <td className="p-3 text-sm font-medium">
                             <div className="font-bold text-foreground">{formatShamsi(entry.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(entry.date, 'full')})</span></div>
                             <div className="text-[11px] text-brand-500 font-mono font-bold">USA: {format(new Date(entry.date), 'yyyy-MM-dd')}</div>
@@ -1212,7 +1222,7 @@ export default function Reports({
                     })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
                         {t.no_records_range || 'No records found for selected date range.'}
                       </td>
                     </tr>
@@ -1249,6 +1259,7 @@ export default function Reports({
               <table className="w-full text-start border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border text-xs font-bold text-muted-foreground uppercase">
+                    <th className="p-3 text-start w-12">{t.record_no || 'No.'}</th>
                     <th className="p-3 text-start">{t.date || 'Date'}</th>
                     <th className="p-3 text-start">{t.item_name || 'Item Name'}</th>
                     <th className="p-3 text-start">{t.type || 'Type'}</th>
@@ -1259,31 +1270,35 @@ export default function Reports({
                 </thead>
                 <tbody className="divide-y divide-border text-sm">
                   {paginatedStock.length > 0 ? (
-                    paginatedStock.map(entry => (
-                      <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="p-3 text-sm font-medium">
-                          <div className="font-bold text-foreground">{formatShamsi(entry.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(entry.date, 'full')})</span></div>
-                          <div className="text-[11px] text-brand-500 font-mono font-bold">USA: {format(new Date(entry.date), 'yyyy-MM-dd')}</div>
-                        </td>
-                        <td className="p-3 font-semibold text-foreground">{entry.item_name}</td>
-                        <td className="p-3">
-                          <span className={cn(
-                            "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border uppercase",
-                            entry.type === 'in'
-                              ? "bg-green-500/10 text-green-500 border-green-500/20"
-                              : "bg-red-500/10 text-red-500 border-red-500/20"
-                          )}>
-                            {entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}
-                          </span>
-                        </td>
-                        <td className="p-3 font-bold text-foreground">{entry.quantity.toLocaleString()}</td>
-                        <td className="p-3 font-mono text-muted-foreground">{entry.bill_number || '-'}</td>
-                        <td className="p-3 text-foreground/80">{entry.description}</td>
-                      </tr>
-                    ))
+                    paginatedStock.map((entry, idx) => {
+                      const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
+                      return (
+                        <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3 text-muted-foreground font-mono font-bold text-xs">#{rowNum}</td>
+                          <td className="p-3 text-sm font-medium">
+                            <div className="font-bold text-foreground">{formatShamsi(entry.date, 'YYYY/MM/DD')} <span className="text-xs font-semibold text-muted-foreground">({formatShamsi(entry.date, 'full')})</span></div>
+                            <div className="text-[11px] text-brand-500 font-mono font-bold">USA: {format(new Date(entry.date), 'yyyy-MM-dd')}</div>
+                          </td>
+                          <td className="p-3 font-semibold text-foreground">{entry.item_name}</td>
+                          <td className="p-3">
+                            <span className={cn(
+                              "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border uppercase",
+                              entry.type === 'in'
+                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                : "bg-red-500/10 text-red-500 border-red-500/20"
+                            )}>
+                              {entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}
+                            </span>
+                          </td>
+                          <td className="p-3 font-bold text-foreground">{entry.quantity.toLocaleString()}</td>
+                          <td className="p-3 font-mono text-muted-foreground">{entry.bill_number || '-'}</td>
+                          <td className="p-3 text-foreground/80">{entry.description}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
                         {t.no_records_range || 'No records found for selected date range.'}
                       </td>
                     </tr>
@@ -1481,6 +1496,7 @@ export default function Reports({
                     <table className="w-full text-start border-collapse">
                       <thead>
                         <tr className="bg-muted/50 border-b border-border text-xs font-bold text-muted-foreground uppercase">
+                          <th className="p-3 text-start w-12">{t.record_no || 'No.'}</th>
                           <th className="p-3 text-start">{t.date || 'Date'}</th>
                           <th className="p-3 text-start">{t.type || 'Type'}</th>
                           <th className="p-3 text-start">{t.currency || 'Currency'}</th>
@@ -1491,10 +1507,12 @@ export default function Reports({
                       </thead>
                       <tbody className="divide-y divide-border text-sm">
                         {paginatedSingleCustomer.length > 0 ? (
-                          paginatedSingleCustomer.map(entry => {
+                          paginatedSingleCustomer.map((entry, idx) => {
                             const isPurchase = (entry.type as string) === 'purchase' || (entry.type as string) === 'debit';
+                            const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
                             return (
                               <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="p-3 text-muted-foreground font-mono font-bold text-xs">#{rowNum}</td>
                                 <td className="p-3 text-sm font-medium">
                                   <div className="font-bold text-foreground">{formatShamsi(entry.date, 'full')}</div>
                                   <div className="text-[11px] text-muted-foreground font-mono">{format(new Date(entry.date), 'yyyy-MM-dd')}</div>
@@ -1527,7 +1545,7 @@ export default function Reports({
                           })
                         ) : (
                           <tr>
-                            <td colSpan={6} className="p-8 text-center text-muted-foreground font-medium">
+                            <td colSpan={7} className="p-8 text-center text-muted-foreground font-medium">
                               {t.no_records_range || 'No transaction records found for this customer.'}
                             </td>
                           </tr>

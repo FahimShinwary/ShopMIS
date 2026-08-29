@@ -134,7 +134,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
           <p class="badge-expense">${totalStockOut.toLocaleString()}</p>
         </div>
         <div class="summary-card">
-          <h3>Current Total Balance</h3>
+          <h3>${t.available_stock || 'Available Stock'}</h3>
           <p style="color: #0f172a; font-weight: 800;">${(totalStockIn - totalStockOut).toLocaleString()}</p>
         </div>
         <div class="summary-card">
@@ -145,6 +145,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
     `;
 
     const columns = [
+      { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
       { header: t.date || 'Date' },
       { header: t.item_name || 'Item Name' },
       { header: t.type || 'Type' },
@@ -158,11 +159,11 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
       dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filtered,
-      recordsPerPage: 20,
       isRTL,
       columns,
-      renderRow: (e: StockEntry) => `
+      renderRow: (e: StockEntry, _idx: number, globalIndex: number) => `
         <tr>
+          <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
           <td>
             <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
             <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
@@ -523,7 +524,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
                   <p className="text-xs font-bold text-red-500">{item.out}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg py-1">
-                  <p className="text-[8px] font-bold text-muted-foreground uppercase">{t.total}</p>
+                  <p className="text-[8px] font-bold text-muted-foreground uppercase">{t.available_stock || 'Available Stock'}</p>
                   <p className="text-xs font-black">{item.balance}</p>
                 </div>
               </div>
@@ -543,6 +544,9 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
           <table className="w-full text-start border-collapse">
             <thead>
               <tr className="bg-muted/50 border-b border-border">
+                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-start w-12">
+                  {t.record_no || 'No.'}
+                </th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-start">
                   <div className="flex items-center gap-2">
                     <Box size={14} />
@@ -593,6 +597,9 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
                   transition={{ delay: index * 0.03 }}
                   className="hover:bg-muted/30 transition-colors group"
                 >
+                  <td className="p-4 text-xs font-mono font-bold text-muted-foreground">
+                    #{(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-brand-500" />
