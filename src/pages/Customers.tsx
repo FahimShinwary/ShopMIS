@@ -56,7 +56,7 @@ export default function Customers({ t, query, customers, onAdd, onEdit, onDelete
       dateText: `${t.total_customers || 'Total Customers'}: ${filteredCustomers.length}`,
       summaryHtml,
       records: filteredCustomers,
-      recordsPerPage: 15,
+      recordsPerPage: 20,
       isRTL,
       columns: [
         { header: 'ID', style: 'width: 60px; text-align: center;' },

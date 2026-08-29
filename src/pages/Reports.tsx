@@ -418,7 +418,7 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredRoznamcha,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: t.date || 'Date' },
@@ -456,7 +456,7 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredKata,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: t.date || 'Date' },
@@ -494,7 +494,7 @@ export default function Reports({
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         records: filteredStock,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: t.date || 'Date' },
@@ -525,7 +525,7 @@ export default function Reports({
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         records: filteredCustomerSummaries,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: '#', style: 'width: 40px; text-align: center;' },
@@ -593,7 +593,7 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: customerHeaderSummary,
         records: singleCustomerTransactions,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: t.date || 'Date' },
@@ -630,7 +630,7 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: summaryGridHtml,
         records: filteredRoznamcha,
-        recordsPerPage: 15,
+        recordsPerPage: 20,
         isRTL,
         columns: [
           { header: t.date || 'Date' },

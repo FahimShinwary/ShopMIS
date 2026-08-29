@@ -365,7 +365,7 @@ export default function Backup({
       dateText: `Generated on ${new Date().toLocaleDateString()} | Admin Backup Report`,
       summaryHtml,
       records: roznamcha,
-      recordsPerPage: 15,
+      recordsPerPage: 20,
       isRTL: true,
       columns: [
         { header: 'Date' },

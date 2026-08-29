@@ -174,7 +174,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       dateText,
       summaryHtml,
       records: filtered,
-      recordsPerPage: 15,
+      recordsPerPage: 20,
       isRTL,
       columns: [
         { header: t.date || 'Date' },

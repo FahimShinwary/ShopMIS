@@ -176,7 +176,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filteredTransactions,
-      recordsPerPage: 15,
+      recordsPerPage: 20,
       isRTL,
       columns,
       renderRow: (tx: KataTransaction) => `

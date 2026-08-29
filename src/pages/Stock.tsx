@@ -158,7 +158,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, onAdd, o
       dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filtered,
-      recordsPerPage: 15,
+      recordsPerPage: 20,
       isRTL,
       columns,
       renderRow: (e: StockEntry) => `
