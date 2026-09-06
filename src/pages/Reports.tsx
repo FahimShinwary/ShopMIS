@@ -434,17 +434,17 @@ export default function Reports({
           const curr = e.currency || 'AFN';
           return `
             <tr>
-              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+              <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
-                <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
-              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
               <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
-              <td style="text-align: center;"><strong>${curr}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 700;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
-              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
           `;
         }
@@ -474,17 +474,17 @@ export default function Reports({
           const curr = e.currency || 'AFN';
           return `
             <tr>
-              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+              <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
-                <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
-              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
               <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
-              <td style="text-align: center;"><strong>${curr}</strong></td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 700;">${e.amount.toLocaleString()} ${curr}</td>
-              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${e.amount.toLocaleString()} ${curr}</td>
+              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
           `;
         }
@@ -508,16 +508,16 @@ export default function Reports({
         ],
         renderRow: (e: StockEntry, _idx: number, gIdx: number) => `
           <tr>
-            <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+            <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
             <td style="text-align: center;">
-              <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-              <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+              <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
             </td>
-            <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
+            <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${e.item_name}</strong></td>
             <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
-            <td style="text-align: end; font-weight: 700;">${e.quantity.toLocaleString()}</td>
-            <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-            <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+            <td style="text-align: end; font-weight: 800; color: #000000;">${e.quantity.toLocaleString()}</td>
+            <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+            <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
           </tr>
         `
       });
@@ -542,21 +542,21 @@ export default function Reports({
           const custName = cust?.name || s.customer_name || 'Unknown';
           return `
             <tr>
-              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
-              <td><strong style="unicode-bidi:plaintext;">${custName}</strong></td>
-              <td style="text-align: center;"><strong>${s.currency || 'AFN'}</strong></td>
-              <td style="text-align: end;">${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
-              <td class="badge-income" style="text-align: end;">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
-              <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 700;">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
+              <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${custName}</strong></td>
+              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${s.currency || 'AFN'}</strong></td>
+              <td style="text-align: end; font-weight: 700; color: #000000;">${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="badge-income" style="text-align: end; font-weight: 800;">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
             </tr>
           `;
         }
       });
     } else if (activeReportTab === 'single_customer' && selectedCustomerObj) {
       const customerHeaderSummary = `
-        <div style="margin-bottom:10px; padding:8px 12px; border:1px solid #93c5fd; border-radius:6px; background-color:#eff6ff;">
-          <h2 style="margin:0; font-size:14px; color:#1e40af;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
-          <p style="margin:3px 0 0 0; font-size:10.5px; color:#475569;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
+        <div style="margin-bottom:10px; padding:8px 12px; border:1.5px solid #1e40af; border-radius:6px; background-color:#eff6ff;">
+          <h2 style="margin:0; font-size:14px; font-weight:800; color:#000000;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
+          <p style="margin:3px 0 0 0; font-size:10.5px; font-weight:700; color:#000000;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
         </div>
 
         <div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px;">
@@ -564,11 +564,11 @@ export default function Reports({
             const s = singleCustomerCurrencySummary[curr];
             if (!s || (s.totalPurchase === 0 && s.totalPaid === 0)) return '';
             return `
-              <div class="summary-card" style="border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; display:inline-flex; align-items:center; gap:8px; background:#f8fafc;">
-                <span style="font-size:8.5px; font-weight:700; color:#334155;">${curr}:</span>
-                <span style="font-size:8.5px; font-weight:700;" class="badge-expense">${t.total_purchase || 'Purchases'}: ${s.totalPurchase.toLocaleString()}</span>
-                <span style="font-size:8.5px; font-weight:700;" class="badge-income">${t.total_paid || 'Paid'}: ${s.totalPaid.toLocaleString()}</span>
-                <span style="font-size:8.5px; font-weight:800; color:${s.remainingBalance > 0 ? '#b91c1c' : '#15803d'};">Net: ${s.remainingBalance.toLocaleString()} ${curr}</span>
+              <div class="summary-card" style="border:1.5px solid #334155; border-radius:5px; padding:3px 8px; display:inline-flex; align-items:center; gap:8px; background:#f8fafc;">
+                <span style="font-size:8.5px; font-weight:800; color:#000000;">${curr}:</span>
+                <span style="font-size:8.5px; font-weight:800;" class="badge-expense">${t.total_purchase || 'Purchases'}: ${s.totalPurchase.toLocaleString()}</span>
+                <span style="font-size:8.5px; font-weight:800;" class="badge-income">${t.total_paid || 'Paid'}: ${s.totalPaid.toLocaleString()}</span>
+                <span style="font-size:8.5px; font-weight:900; color:${s.remainingBalance > 0 ? '#b91c1c' : '#15803d'};">Net: ${s.remainingBalance.toLocaleString()} ${curr}</span>
               </div>
             `;
           }).join('')}
@@ -597,16 +597,16 @@ export default function Reports({
           const curr = e.currency || 'AFN';
           return `
             <tr>
-              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+              <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
-                <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
               <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-              <td style="text-align: center;"><strong>${curr}</strong></td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 700;">${e.amount.toLocaleString()} ${curr}</td>
-              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
+              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${e.amount.toLocaleString()} ${curr}</td>
+              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
           `;
         }
@@ -636,17 +636,17 @@ export default function Reports({
           const curr = e.currency || 'AFN';
           return `
             <tr>
-              <td style="text-align: center; color: #64748b; font-weight: bold;">${gIdx + 1}</td>
+              <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
-                <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
-              <td><strong style="unicode-bidi:plaintext;">${cName}</strong></td>
+              <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
               <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
-              <td style="text-align: center;"><strong>${curr}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 700;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
-              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-              <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
+              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
           `;
         }

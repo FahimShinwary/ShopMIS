@@ -192,17 +192,17 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       ],
       renderRow: (e: RoznamchaEntry, _idx: number, globalIndex: number) => `
         <tr>
-          <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
+          <td style="text-align: center; color: #000000; font-weight: 700;">${globalIndex + 1}</td>
           <td style="text-align: center;">
-            <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-            <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+            <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+            <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
           </td>
-          <td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
+          <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
           <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
-          <td style="text-align: center;"><strong>${e.currency || 'AFN'}</strong></td>
-          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 700;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
-          <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
-          <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
+          <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${e.currency || 'AFN'}</strong></td>
+          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
+          <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+          <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
         </tr>
       `
     });

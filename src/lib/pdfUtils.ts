@@ -18,12 +18,13 @@ export const PASHTO_FONT_STACK = "'Cairo', 'Vazirmatn', 'Noto Naskh Arabic', 'No
  * and crystal-clear typography across Roznamcha, Kata, Customers, and Stock Book.
  */
 export const getStandardPrintCss = (isRTL: boolean = true): string => `
-  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');
 
   * {
     box-sizing: border-box;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
     letter-spacing: normal !important;
     word-spacing: normal !important;
   }
@@ -32,11 +33,11 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     margin: 0;
     padding: 0;
     background-color: #ffffff;
-    color: #0f172a;
+    color: #000000;
     font-family: ${PASHTO_FONT_STACK};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    text-rendering: geometricPrecision;
     letter-spacing: normal !important;
     word-spacing: normal !important;
   }
@@ -69,7 +70,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-feature-settings: "liga" 1, "calt" 1, "rlig" 1, "mkmk" 1, "mark" 1, "kern" 1 !important;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
-    text-rendering: optimizeLegibility !important;
+    text-rendering: geometricPrecision !important;
   }
 
   ${isRTL ? `
@@ -111,7 +112,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     flex-direction: column;
     justify-content: flex-start;
     position: relative;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   }
@@ -126,18 +127,18 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .header {
     text-align: center !important;
     margin-bottom: 6px;
-    border-bottom: 2px solid #0f172a;
+    border-bottom: 2px solid #000000;
     padding-bottom: 4px;
   }
   .header.header-subsequent {
     text-align: inherit !important;
     margin-bottom: 6px;
-    border-bottom: 2px solid #0f172a;
+    border-bottom: 2px solid #000000;
     padding-bottom: 4px;
   }
   .header h1 {
     margin: 0 0 1px 0;
-    color: #0f172a;
+    color: #000000;
     font-size: 17px;
     font-weight: 800;
     line-height: 1.2;
@@ -145,25 +146,25 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
   .header h2 {
     margin: 1px 0;
-    color: #1e293b;
+    color: #000000;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.2;
     letter-spacing: normal !important;
   }
   .header h3 {
     margin: 1px 0;
-    color: #475569;
+    color: #000000;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
     letter-spacing: normal !important;
   }
   .header p {
     margin: 0;
-    color: #475569;
+    color: #000000;
     font-size: 9.5px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: normal !important;
   }
 
@@ -174,7 +175,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     margin-bottom: 6px;
   }
   .summary-card {
-    border: 1px solid #cbd5e1;
+    border: 1.5px solid #1e293b;
     background-color: #f8fafc;
     padding: 3px 8px;
     border-radius: 5px;
@@ -182,15 +183,15 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   .summary-card h3 {
     margin: 0;
     font-size: 8.5px;
-    font-weight: 700;
-    color: #475569;
+    font-weight: 800;
+    color: #000000;
     letter-spacing: normal !important;
   }
   .summary-card p {
     margin: 1px 0 0;
     font-size: 10.5px;
     font-weight: 800;
-    color: #0f172a;
+    color: #000000;
     line-height: 1.2;
     letter-spacing: normal !important;
   }
@@ -208,11 +209,12 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
   
   th, td {
-    border: 1px solid #cbd5e1 !important;
+    border: 1px solid #334155 !important;
     padding: 3.5px 4px !important;
     font-size: 8.5px !important;
     line-height: 1.3 !important;
-    color: #0f172a !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
     vertical-align: middle !important;
     text-align: ${isRTL ? 'right' : 'left'} !important;
     letter-spacing: normal !important;
@@ -229,11 +231,22 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   td {
+    color: #000000 !important;
+    font-weight: 700 !important;
     white-space: normal !important;
     word-break: normal !important;
     overflow-wrap: break-word !important;
     word-wrap: break-word !important;
     hyphens: none !important;
+  }
+
+  td strong, td b {
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+
+  td div, td span {
+    font-weight: 700 !important;
   }
 
   /* Specific column alignment rules */
@@ -247,7 +260,8 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   th {
     background-color: #f1f5f9 !important;
     font-weight: 800 !important;
-    color: #0f172a !important;
+    color: #000000 !important;
+    border: 1.5px solid #0f172a !important;
     padding: 4px 4px !important;
     font-size: 8.5px !important;
     letter-spacing: normal !important;
@@ -266,17 +280,17 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     display: inline-block;
   }
 
-  .badge-income {
+  .badge-income, td.badge-income, span.badge-income, p.badge-income {
     color: #15803d !important;
-    font-weight: 800;
+    font-weight: 800 !important;
   }
-  .badge-expense {
+  .badge-expense, td.badge-expense, span.badge-expense, p.badge-expense {
     color: #b91c1c !important;
-    font-weight: 800;
+    font-weight: 800 !important;
   }
-  .badge-neutral {
-    color: #2563eb !important;
-    font-weight: 800;
+  .badge-neutral, td.badge-neutral, span.badge-neutral, p.badge-neutral {
+    color: #1d4ed8 !important;
+    font-weight: 800 !important;
   }
 
   .footer, .pdf-page .footer {
@@ -284,39 +298,118 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   @media print {
-    .no-print { display: none !important; }
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    
+    .no-print {
+      display: none !important;
+    }
+
     html, body {
       background: #ffffff !important;
+      color: #000000 !important;
       padding: 0 !important;
       margin: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+      overflow: visible !important;
       letter-spacing: normal !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+      text-rendering: geometricPrecision !important;
     }
-    .pdf-wrapper { padding: 0 !important; display: block !important; }
-    .pdf-container { border: none !important; box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
-    .pdf-pages-wrapper { gap: 0 !important; display: block !important; width: 100% !important; }
+
+    .pdf-wrapper {
+      padding: 0 !important;
+      margin: 0 !important;
+      display: block !important;
+      background: transparent !important;
+      width: 100% !important;
+      min-height: 0 !important;
+    }
+
+    .pdf-container {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      background: transparent !important;
+      min-height: 0 !important;
+    }
+
+    .pdf-pages-wrapper {
+      gap: 0 !important;
+      display: block !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
     .pdf-page {
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 6mm 7mm 8mm 7mm !important;
-      margin: 0 !important;
+      padding: 6mm 8mm 8mm 8mm !important;
+      margin: 0 auto !important;
       width: 100% !important;
-      min-height: 280mm !important;
+      max-width: 100% !important;
+      min-height: 0 !important;
       height: auto !important;
-      max-height: 292mm !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
       box-sizing: border-box !important;
+      color: #000000 !important;
+      background: #ffffff !important;
+      display: block !important;
     }
+
     .pdf-page:last-child {
       page-break-after: avoid !important;
       break-after: avoid !important;
     }
-    @page { size: A4 portrait; margin: 0; }
-    tr { page-break-inside: avoid; }
-    thead { display: table-header-group; }
+
+    .pdf-page-content {
+      width: 100% !important;
+      display: block !important;
+      min-height: 0 !important;
+    }
+
+    table {
+      page-break-inside: auto !important;
+      break-inside: auto !important;
+    }
+
+    th, td {
+      color: #000000 !important;
+      border: 1px solid #1e293b !important;
+      font-weight: 700 !important;
+    }
+
+    th {
+      background-color: #f1f5f9 !important;
+      font-weight: 800 !important;
+      border: 1.5px solid #0f172a !important;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    tr {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    thead {
+      display: table-header-group !important;
+    }
   }
 `;
 
@@ -347,7 +440,7 @@ export interface PaginatedReportOptions<T> {
 /**
  * Utility to chunk any dataset into slices per A4 page.
  */
-export function chunkArray<T>(items: T[], chunkSize: number = 26): T[][] {
+export function chunkArray<T>(items: T[], chunkSize: number = 14): T[][] {
   if (!items || items.length === 0) return [];
   const result: T[][] = [];
   for (let i = 0; i < items.length; i += chunkSize) {
@@ -362,8 +455,8 @@ export function chunkArray<T>(items: T[], chunkSize: number = 26): T[][] {
  */
 export function chunkReportRecords<T>(
   items: T[],
-  firstPageCapacity: number = 22,
-  subsequentPageCapacity: number = 25
+  firstPageCapacity: number = 10,
+  subsequentPageCapacity: number = 14
 ): T[][] {
   if (!items || items.length === 0) return [];
   const result: T[][] = [];
@@ -431,11 +524,11 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
 
   const hasSummary = Boolean(summaryHtml && summaryHtml.trim().length > 0);
   
-  // Standard A4 capacities:
-  // Page 1: 26 records (if summary widget present) or 30 records (if no summary widget)
-  // Page 2+: 32 records (with compact official header)
-  const firstPageSize = firstPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : (hasSummary ? 26 : 30));
-  const subsequentPageSize = subsequentPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : 32);
+  // Optimized A4 capacities for high readability & quality in print and PDF:
+  // Page 1: 10 records (if summary widget present) or 12 records (if no summary widget)
+  // Page 2+: 14 records (within 12 to 15 range)
+  const firstPageSize = firstPageRecords || (recordsPerPage ? recordsPerPage : (hasSummary ? 10 : 12));
+  const subsequentPageSize = subsequentPageRecords || (recordsPerPage ? recordsPerPage : 14);
 
   const chunks = chunkReportRecords(records, firstPageSize, subsequentPageSize);
   const now = new Date();
@@ -467,11 +560,11 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page">
           <div class="pdf-page-content">
             <div class="header">
-              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
-              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
-              <h2 style="font-size: 13px; font-weight: 700; margin: 2px 0 1px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
-              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
-              <p style="font-size: 9.5px; color: #64748b; margin: 1px 0 0 0;">${dateText || dateStr}</p>
+              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #000000; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #000000; font-weight: 700;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 13px; font-weight: 800; margin: 2px 0 1px 0; color: #000000; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 700; color: #000000; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 9.5px; color: #000000; font-weight: 700; margin: 1px 0 0 0;">${dateText || dateStr}</p>
             </div>
 
             ${summaryHtml ? summaryHtml : ''}
@@ -481,7 +574,7 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
               ${tableHeaderHtml}
               <tbody>
                 <tr>
-                  <td colspan="${normalizedCols.length}" class="text-center" style="padding: 24px; color: #64748b; font-weight: bold;">
+                  <td colspan="${normalizedCols.length}" class="text-center" style="padding: 24px; color: #000000; font-weight: 800;">
                     ${emptyMessage}
                   </td>
                 </tr>
@@ -509,26 +602,26 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page-content">
           ${isFirstPage ? `
             <div class="header">
-              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
-              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
-              <h2 style="font-size: 13px; font-weight: 700; margin: 2px 0 1px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
-              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
-              <p style="font-size: 9.5px; color: #64748b; margin: 1px 0 0 0;">${dateText || dateStr}</p>
+              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #000000; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #000000; font-weight: 700;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 13px; font-weight: 800; margin: 2px 0 1px 0; color: #000000; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 700; color: #000000; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 9.5px; color: #000000; font-weight: 700; margin: 1px 0 0 0;">${dateText || dateStr}</p>
             </div>
             ${summaryHtml ? summaryHtml : ''}
           ` : `
             <div class="header header-subsequent">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div style="text-align: ${isRTL ? 'right' : 'left'};">
-                  <div style="font-size: 13px; font-weight: 800; color: #0f172a; line-height: 1.2;">
+                  <div style="font-size: 13px; font-weight: 800; color: #000000; line-height: 1.2;">
                     ${effectiveShopName}
                   </div>
-                  ${effectiveShopAddress ? `<div style="font-size: 9.5px; color: #475569; font-weight: 500; margin-top: 1px;">${effectiveShopAddress}</div>` : ''}
-                  <div style="font-size: 11px; font-weight: 700; color: #2563eb; margin-top: 2px;">
-                    ${title} ${subtitle && subtitle !== effectiveShopName ? `<span style="font-size: 10px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
+                  ${effectiveShopAddress ? `<div style="font-size: 9.5px; color: #000000; font-weight: 700; margin-top: 1px;">${effectiveShopAddress}</div>` : ''}
+                  <div style="font-size: 11px; font-weight: 800; color: #000000; margin-top: 2px;">
+                    ${title} ${subtitle && subtitle !== effectiveShopName ? `<span style="font-size: 10px; font-weight: 700; color: #000000;">(${subtitle})</span>` : ''}
                   </div>
                 </div>
-                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 9.5px; color: #475569; font-weight: 600; white-space: nowrap;">
+                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 9.5px; color: #000000; font-weight: 700; white-space: nowrap;">
                   <div>${dateText || dateStr}</div>
                 </div>
               </div>
@@ -740,12 +833,21 @@ export const getStandardPrintHtml = (
 
         window.onload = function() {
           if (${autoPrint ? 'true' : 'false'}) {
+            var doPrint = function() {
+              window.focus();
+              setTimeout(function() {
+                window.print();
+              }, 150);
+            };
+
             if (document.fonts && document.fonts.ready) {
               document.fonts.ready.then(function() {
-                setTimeout(function() { window.print(); }, 250);
+                setTimeout(doPrint, 350);
+              }).catch(function() {
+                setTimeout(doPrint, 500);
               });
             } else {
-              setTimeout(function() { window.print(); }, 400);
+              setTimeout(doPrint, 500);
             }
           }
         };
@@ -767,13 +869,14 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
 
   const iframe = document.createElement('iframe');
   iframe.id = 'print-service-iframe';
+  // Use visibility hidden with realistic dimensions so layout and CSS calculations are accurately rendered
   iframe.style.position = 'fixed';
   iframe.style.right = '0px';
   iframe.style.bottom = '0px';
-  iframe.style.width = '100px';
-  iframe.style.height = '100px';
+  iframe.style.width = '794px';
+  iframe.style.height = '1123px';
   iframe.style.border = 'none';
-  iframe.style.opacity = '0.01';
+  iframe.style.visibility = 'hidden';
   iframe.style.zIndex = '-9999';
   iframe.style.pointerEvents = 'none';
 
@@ -797,8 +900,11 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
 
   const executePrint = () => {
     try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
+      const win = iframe.contentWindow;
+      if (win) {
+        win.focus();
+        win.print();
+      }
     } catch (err) {
       console.warn('Iframe print error, using window fallback:', err);
       const printWin = window.open('', '_blank');
@@ -810,14 +916,15 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
     }
   };
 
+  // Wait for fonts and complete layout paint before invoking print dialog
   if (iframe.contentWindow?.document?.fonts?.ready) {
     iframe.contentWindow.document.fonts.ready.then(() => {
-      setTimeout(executePrint, 200);
-    }).catch(() => {
       setTimeout(executePrint, 350);
+    }).catch(() => {
+      setTimeout(executePrint, 450);
     });
   } else {
-    setTimeout(executePrint, 400);
+    setTimeout(executePrint, 450);
   }
 }
 
@@ -920,7 +1027,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
       <html dir="${isRTL ? 'rtl' : 'ltr'}">
       <head>
         <meta charset="utf-8">
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
           ${printCss}
           html, body {
@@ -1008,7 +1115,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
       });
 
       if (canvas && canvas.width > 0 && canvas.height > 0) {
-        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const imgHeight = (canvas.height * printableWidth) / canvas.width;
         const renderHeight = Math.min(imgHeight, printableHeight);
 

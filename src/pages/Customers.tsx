@@ -71,11 +71,11 @@ export default function Customers({ t, query, customers, shopName, shopAddress, 
       ],
       renderRow: (c, _idx, globalIndex) => `
         <tr>
-          <td style="text-align: center; font-weight: 700; color: #64748b;">${globalIndex + 1}</td>
-          <td style="text-align: center; font-weight: 600; color: #94a3b8;">${c.id}</td>
-          <td><strong style="unicode-bidi: plaintext;">${c.name}</strong></td>
-          <td><span style="unicode-bidi: plaintext;">${c.address || '-'}</span></td>
-          <td><span style="unicode-bidi: plaintext;">${c.contact || '-'}</span></td>
+          <td style="text-align: center; font-weight: 700; color: #000000;">${globalIndex + 1}</td>
+          <td style="text-align: center; font-weight: 800; color: #000000;">${c.id}</td>
+          <td><strong style="unicode-bidi: plaintext; font-weight: 800; color: #000000;">${c.name}</strong></td>
+          <td><span style="unicode-bidi: plaintext; font-weight: 700; color: #000000;">${c.address || '-'}</span></td>
+          <td style="text-align: center;"><span style="unicode-bidi: plaintext; font-weight: 700; color: #000000;">${c.contact || '-'}</span></td>
         </tr>
       `
     });

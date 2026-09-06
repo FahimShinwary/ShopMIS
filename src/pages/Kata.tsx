@@ -194,19 +194,19 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       columns,
       renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => `
         <tr>
-          <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
+          <td style="text-align: center; color: #000000; font-weight: 700;">${globalIndex + 1}</td>
           <td style="text-align: center;">
-            <div style="font-weight:700;">${formatShamsi(tx.date, 'YYYY/MM/DD')}</div>
-            <div style="font-size:8px; color:#475569;">${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
+            <div style="font-weight: 800; color: #000000;">${formatShamsi(tx.date, 'YYYY/MM/DD')}</div>
+            <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
           </td>
-          ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
+          ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
           <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-          <td style="text-align: center;"><strong>${tx.currency || 'AFN'}</strong></td>
-          <td style="text-align: center;">${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
-          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 700;">
+          <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${tx.currency || 'AFN'}</strong></td>
+          <td style="text-align: center;">${tx.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
+          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">
             ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
           </td>
-          <td><span style="unicode-bidi:plaintext;">${tx.description || '-'}</span></td>
+          <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${tx.description || '-'}</span></td>
         </tr>
       `
     });
