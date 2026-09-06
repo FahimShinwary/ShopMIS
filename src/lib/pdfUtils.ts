@@ -104,24 +104,42 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
 
   .pdf-page {
     width: 794px;
+    height: 1123px;
     min-height: 1123px;
+    max-height: 1123px;
     background: #ffffff;
-    padding: 14px 16px 20px 16px;
+    padding: 14px 18px 12px 18px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     position: relative;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
   }
 
   .pdf-page-content {
-    flex: 1 0 auto;
+    flex: 1 1 auto;
     width: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
+  .pdf-table-container {
+    flex: 1 1 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-top: 3px;
+    min-height: 0;
+  }
+
+  .pdf-table-container.is-full-page table {
+    height: 100% !important;
   }
 
   .header {
@@ -210,9 +228,9 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   
   th, td {
     border: 1px solid #334155 !important;
-    padding: 3.5px 4px !important;
-    font-size: 8.5px !important;
-    line-height: 1.3 !important;
+    padding: 5px 6px !important;
+    font-size: 10px !important;
+    line-height: 1.35 !important;
     color: #000000 !important;
     font-weight: 700 !important;
     vertical-align: middle !important;
@@ -262,8 +280,8 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-weight: 800 !important;
     color: #000000 !important;
     border: 1.5px solid #0f172a !important;
-    padding: 4px 4px !important;
-    font-size: 8.5px !important;
+    padding: 6px 6px !important;
+    font-size: 10.5px !important;
     letter-spacing: normal !important;
     white-space: normal !important;
     word-break: normal !important;
@@ -293,8 +311,22 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     font-weight: 800 !important;
   }
 
-  .footer, .pdf-page .footer {
-    display: none !important;
+  .pdf-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding-top: 6px !important;
+    margin-top: 4px !important;
+    border-top: 1.5px solid #0f172a !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+  }
+  .pdf-footer .footer-col {
+    flex: 1;
   }
 
   @media print {
@@ -353,20 +385,23 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 6mm 8mm 8mm 8mm !important;
+      padding: 6mm 8mm 6mm 8mm !important;
       margin: 0 auto !important;
       width: 100% !important;
       max-width: 100% !important;
-      min-height: 0 !important;
-      height: auto !important;
+      height: 295mm !important;
+      max-height: 295mm !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
-      box-sizing: border-box !important;
       color: #000000 !important;
       background: #ffffff !important;
-      display: block !important;
+      overflow: hidden !important;
     }
 
     .pdf-page:last-child {
@@ -376,8 +411,37 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
 
     .pdf-page-content {
       width: 100% !important;
-      display: block !important;
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
       min-height: 0 !important;
+    }
+
+    .pdf-table-container {
+      width: 100% !important;
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
+    }
+
+    .pdf-table-container.is-full-page table {
+      height: 100% !important;
+    }
+
+    .pdf-footer {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      width: 100% !important;
+      padding-top: 2mm !important;
+      margin-top: 2mm !important;
+      border-top: 1.5px solid #000000 !important;
+      font-size: 9pt !important;
+      font-weight: 700 !important;
+      color: #000000 !important;
+      flex-shrink: 0 !important;
     }
 
     table {
@@ -456,7 +520,7 @@ export function chunkArray<T>(items: T[], chunkSize: number = 14): T[][] {
 export function chunkReportRecords<T>(
   items: T[],
   firstPageCapacity: number = 10,
-  subsequentPageCapacity: number = 14
+  subsequentPageCapacity: number = 15
 ): T[][] {
   if (!items || items.length === 0) return [];
   const result: T[][] = [];
@@ -498,7 +562,7 @@ export function getSavedShopInfo(): { name: string; address: string } {
 /**
  * Generates an A4 print-ready, multi-page HTML report where records fill all the way
  * down to the footer area on each page, subsequent pages start right after an official header
- * showing the Shop Name, Address, and Report Title, with no footers printed or copied to Excel.
+ * showing the Shop Name, Address, and Report Title, with footers displayed on all pages.
  */
 export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>): string {
   const {
@@ -515,7 +579,8 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
     subsequentPageRecords,
     renderRow,
     emptyMessage = 'No records found',
-    isRTL = true
+    isRTL = true,
+    footerNote
   } = options;
 
   const savedShop = getSavedShopInfo();
@@ -526,11 +591,12 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
   
   // Optimized A4 capacities for high readability & quality in print and PDF:
   // Page 1: 10 records (if summary widget present) or 12 records (if no summary widget)
-  // Page 2+: 14 records (within 12 to 15 range)
+  // Page 2+: 15 records
   const firstPageSize = firstPageRecords || (recordsPerPage ? recordsPerPage : (hasSummary ? 10 : 12));
-  const subsequentPageSize = subsequentPageRecords || (recordsPerPage ? recordsPerPage : 14);
+  const subsequentPageSize = subsequentPageRecords || (recordsPerPage ? recordsPerPage : 15);
 
   const chunks = chunkReportRecords(records, firstPageSize, subsequentPageSize);
+  const totalPages = Math.max(1, chunks.length);
   const now = new Date();
   const dateStr = `${formatShamsi(now, 'full')} | USA: ${now.toISOString().split('T')[0]}`;
 
@@ -569,17 +635,31 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
 
             ${summaryHtml ? summaryHtml : ''}
 
-            <table>
-              ${colGroupHtml}
-              ${tableHeaderHtml}
-              <tbody>
-                <tr>
-                  <td colspan="${normalizedCols.length}" class="text-center" style="padding: 24px; color: #000000; font-weight: 800;">
-                    ${emptyMessage}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="pdf-table-container">
+              <table>
+                ${colGroupHtml}
+                ${tableHeaderHtml}
+                <tbody>
+                  <tr>
+                    <td colspan="${normalizedCols.length}" class="text-center" style="padding: 32px; color: #000000; font-weight: 800;">
+                      ${emptyMessage}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="pdf-footer">
+            <div class="footer-col" style="text-align: ${isRTL ? 'right' : 'left'};">
+              ${isRTL ? 'پاڼه' : 'Page'} <strong>1</strong> ${isRTL ? 'د' : 'of'} <strong>1</strong>
+            </div>
+            <div class="footer-col" style="text-align: center;">
+              <span>${footerNote || (isRTL ? 'د حسابونو تصدیق او لاسلیک: ________________' : 'Verification & Signature: ________________')}</span>
+            </div>
+            <div class="footer-col" style="text-align: ${isRTL ? 'left' : 'right'};">
+              <strong>${effectiveShopName}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -591,10 +671,21 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
   const pagesHtml = chunks.map((chunk, pageIndex) => {
     const pageNumber = pageIndex + 1;
     const isFirstPage = pageIndex === 0;
+    const pageSize = isFirstPage ? firstPageSize : subsequentPageSize;
+    const isFullPage = chunk.length >= Math.max(1, Math.floor(pageSize * 0.75));
+    // Exact row height calculation to comfortably fill page between header and footer:
+    // Page 1 with summary (10 records): ~78px
+    // Page 1 without summary (12 records): ~72px
+    // Subsequent pages (15 records): ~64px
+    const targetRowHeight = isFirstPage ? (hasSummary ? 78 : 72) : 64;
 
     const rowsHtml = chunk.map((record, indexInPage) => {
       const currentGlobalIndex = runningGlobalIndex++;
-      return renderRow(record, indexInPage, currentGlobalIndex);
+      const rawRow = renderRow(record, indexInPage, currentGlobalIndex);
+      if (rawRow.includes('style="')) {
+        return rawRow.replace('style="', `style="height: ${targetRowHeight}px; `);
+      }
+      return rawRow.replace('<tr', `<tr style="height: ${targetRowHeight}px;"`);
     }).join('');
 
     return `
@@ -628,13 +719,27 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
             </div>
           `}
 
-          <table>
-            ${colGroupHtml}
-            ${tableHeaderHtml}
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
+          <div class="pdf-table-container ${isFullPage ? 'is-full-page' : ''}">
+            <table>
+              ${colGroupHtml}
+              ${tableHeaderHtml}
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pdf-footer">
+          <div class="footer-col" style="text-align: ${isRTL ? 'right' : 'left'};">
+            ${isRTL ? 'پاڼه' : 'Page'} <strong>${pageNumber}</strong> ${isRTL ? 'د' : 'of'} <strong>${totalPages}</strong>
+          </div>
+          <div class="footer-col" style="text-align: center;">
+            <span>${footerNote || (isRTL ? 'د حسابونو تصدیق او لاسلیک: ________________' : 'Verification & Signature: ________________')}</span>
+          </div>
+          <div class="footer-col" style="text-align: ${isRTL ? 'left' : 'right'};">
+            <strong>${effectiveShopName}</strong>
+          </div>
         </div>
       </div>
     `;
@@ -651,7 +756,8 @@ export const getStandardPrintHtml = (
   contentHtml: string,
   title: string = 'Report',
   isRTL: boolean = true,
-  autoPrint: boolean = true
+  autoPrint: boolean = true,
+  showActionBar: boolean = true
 ): string => {
   return `
     <!DOCTYPE html>
@@ -663,61 +769,106 @@ export const getStandardPrintHtml = (
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+      
+      <style media="print">
+        #action-bar,
+        .action-bar,
+        .no-print,
+        [data-no-print] {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          max-height: 0 !important;
+          width: 0 !important;
+          max-width: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border: none !important;
+          overflow: hidden !important;
+          position: absolute !important;
+          left: -99999px !important;
+          top: -99999px !important;
+        }
+      </style>
+
       <style>
         ${getStandardPrintCss(isRTL)}
 
-        .action-bar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #ffffff;
-          padding: 12px 24px;
-          border-bottom: 1px solid #e2e8f0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-          position: sticky;
-          top: 0;
-          z-index: 100;
+        @media screen {
+          .action-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+          }
+          .action-bar .title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #0f172a;
+          }
+          .action-bar .hint-text {
+            font-size: 12px;
+            color: #2563eb;
+            font-weight: 600;
+            margin-top: 2px;
+          }
+          .action-bar .btn-group {
+            display: flex;
+            gap: 10px;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+          }
+          .btn-primary {
+            background-color: #2563eb;
+            color: #ffffff;
+          }
+          .btn-primary:hover {
+            background-color: #1d4ed8;
+          }
+          .btn-secondary {
+            background-color: #0f172a;
+            color: #ffffff;
+          }
+          .btn-secondary:hover {
+            background-color: #1e293b;
+          }
         }
-        .action-bar .title {
-          font-weight: 700;
-          font-size: 16px;
-          color: #0f172a;
-        }
-        .action-bar .hint-text {
-          font-size: 12px;
-          color: #2563eb;
-          font-weight: 600;
-          margin-top: 2px;
-        }
-        .action-bar .btn-group {
-          display: flex;
-          gap: 10px;
-        }
-        .btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 9px 18px;
-          border-radius: 8px;
-          font-weight: 700;
-          font-size: 13px;
-          cursor: pointer;
-          border: none;
-          transition: all 0.2s;
-        }
-        .btn-primary {
-          background-color: #2563eb;
-          color: #ffffff;
-        }
-        .btn-primary:hover {
-          background-color: #1d4ed8;
-        }
-        .btn-secondary {
-          background-color: #0f172a;
-          color: #ffffff;
-        }
-        .btn-secondary:hover {
-          background-color: #1e293b;
+
+        @media print {
+          #action-bar,
+          .action-bar,
+          .no-print,
+          [data-no-print] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            max-height: 0 !important;
+            width: 0 !important;
+            max-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            left: -99999px !important;
+            top: -99999px !important;
+          }
         }
 
         .pdf-wrapper {
@@ -738,11 +889,12 @@ export const getStandardPrintHtml = (
       </style>
     </head>
     <body>
-      <div class="action-bar no-print">
+      ${showActionBar ? `
+      <div class="action-bar no-print" id="action-bar">
         <div>
           <div class="title">${title}</div>
           <div class="hint-text">
-            ${isRTL ? '💡 د پوره A4 پاڼې ډک چاپ او PDF ثبتولو لپاره لاندې تڼۍ کېکاږئ' : '💡 Click Print to print or Save as PDF (Full A4 Page)'}
+            ${isRTL ? '💡 د ریکارډونو کاپي کولو یا د چاپ او PDF ثبتولو لپاره لاندې تڼۍ وکاروئ' : '💡 Use buttons below to copy data for Excel or Print / Save as PDF'}
           </div>
         </div>
         <div class="btn-group">
@@ -750,12 +902,13 @@ export const getStandardPrintHtml = (
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"></path></svg>
             ${isRTL ? 'د ټولو ریکارډونو کاپي (Excel)' : 'Copy Records for Excel'}
           </button>
-          <button class="btn btn-primary" onclick="window.print()">
+          <button class="btn btn-primary" onclick="triggerPrint()">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"></path></svg>
             ${isRTL ? 'چاپ / Save as PDF' : 'Print / Save as PDF'}
           </button>
         </div>
       </div>
+      ` : ''}
 
       <div class="pdf-wrapper">
         <div id="pdf-content" class="pdf-container pdf-report-root">
@@ -764,6 +917,25 @@ export const getStandardPrintHtml = (
       </div>
 
       <script>
+        function triggerPrint() {
+          var bar = document.getElementById('action-bar');
+          if (bar) bar.style.display = 'none';
+          window.print();
+          setTimeout(function() {
+            if (bar) bar.style.display = '';
+          }, 400);
+        }
+
+        window.addEventListener('beforeprint', function() {
+          var bar = document.getElementById('action-bar');
+          if (bar) bar.style.display = 'none';
+        });
+
+        window.addEventListener('afterprint', function() {
+          var bar = document.getElementById('action-bar');
+          if (bar) bar.style.display = '';
+        });
+
         function copyTableDataForExcel() {
           var tables = document.querySelectorAll('#pdf-content table');
           if (!tables || tables.length === 0) return;
@@ -836,7 +1008,7 @@ export const getStandardPrintHtml = (
             var doPrint = function() {
               window.focus();
               setTimeout(function() {
-                window.print();
+                triggerPrint();
               }, 150);
             };
 
@@ -893,7 +1065,7 @@ export function printViaIframe(contentHtml: string, title: string = 'Report', is
     return;
   }
 
-  const fullHtml = getStandardPrintHtml(contentHtml, title, isRTL, false);
+  const fullHtml = getStandardPrintHtml(contentHtml, title, isRTL, false, false);
   doc.open();
   doc.write(fullHtml);
   doc.close();
@@ -1046,14 +1218,20 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
           }
           .pdf-page {
             width: 794px;
-            min-height: 1080px;
+            height: 1123px;
+            min-height: 1123px;
+            max-height: 1123px;
             box-sizing: border-box;
             background: #ffffff;
             margin: 0;
-            padding: 14px 16px 20px 16px;
+            padding: 14px 18px 12px 18px;
             border: none;
             box-shadow: none;
             border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
           }
         </style>
       </head>
@@ -1109,7 +1287,9 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
         imageTimeout: 0,
         backgroundColor: '#ffffff',
         width: 794,
+        height: 1123,
         windowWidth: 794,
+        windowHeight: 1123,
         scrollX: 0,
         scrollY: 0
       });
