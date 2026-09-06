@@ -153,25 +153,33 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           <p class="badge-income">${selectedCustomer.total_paid.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
         </div>
         <div class="summary-card">
-          <h3>${t.remaining_balance || 'Remaining Balance'}</h3>
+          <h3>${t.remaining_balance || t.remaining || 'Remaining Balance'}</h3>
           <p class="${selectedCustomer.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${selectedCustomer.remaining_balance.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
         </div>
         <div class="summary-card">
-          <h3>Total Transactions</h3>
+          <h3>${t.total_transactions || 'Total Transactions'}</h3>
           <p style="color: #0f172a;">${filteredTransactions.length}</p>
         </div>
       </div>
     ` : '';
 
-    const columns = [
-      { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
-      { header: t.date || 'Date' },
-      ...(!selectedCustomer ? [{ header: t.customer || 'Customer' }] : []),
-      { header: t.type || 'Type' },
-      { header: t.currency || 'Currency' },
-      { header: t.bill_number || 'Bill #' },
-      { header: t.amount || 'Amount' },
-      { header: t.description || 'Description' }
+    const columns = selectedCustomer ? [
+      { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
+      { header: t.date || 'Date', style: 'width: 13%; text-align: center;' },
+      { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+      { header: t.currency || 'Currency', style: 'width: 7%; text-align: center;' },
+      { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
+      { header: t.amount || 'Amount', style: 'width: 15%; text-align: end;' },
+      { header: t.description || 'Description', style: 'width: 37%;' }
+    ] : [
+      { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
+      { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
+      { header: t.customer_name || t.customer || 'Customer', style: 'width: 19%;' },
+      { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+      { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
+      { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
+      { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
+      { header: t.description || 'Description', style: 'width: 24%;' }
     ];
 
     const contentHtml = createPaginatedReportHtml<KataTransaction>({
@@ -179,7 +187,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       subtitle: shopName,
       shopName,
       shopAddress,
-      dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
+      dateText: `${t.generated_on || 'Generated on'} ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filteredTransactions,
       isRTL,
@@ -187,15 +195,15 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => `
         <tr>
           <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
-          <td>
-            <div style="font-weight:700">${formatShamsi(tx.date, 'YYYY/MM/DD')} (${formatShamsi(tx.date, 'full')})</div>
-            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
+          <td style="text-align: center;">
+            <div style="font-weight:700;">${formatShamsi(tx.date, 'YYYY/MM/DD')}</div>
+            <div style="font-size:8px; color:#475569;">${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
           </td>
           ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
-          <td>${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-          <td><strong>${tx.currency || 'AFN'}</strong></td>
-          <td>${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
-          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}">
+          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
+          <td style="text-align: center;"><strong>${tx.currency || 'AFN'}</strong></td>
+          <td style="text-align: center;">${tx.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
+          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 700;">
             ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
           </td>
           <td><span style="unicode-bidi:plaintext;">${tx.description || '-'}</span></td>
@@ -215,7 +223,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
     const isRTL = document.documentElement.dir === 'rtl';
     const customer = customers.find(c => c.id === tx.customer_id);
     const isPurchase = tx.type === 'purchase' || (tx.type as string) === 'debit';
-    const title = `${isPurchase ? (t.purchase || 'Purchase Bill') : (t.payment || 'Payment Receipt')} #${tx.bill_number || tx.id}`;
+    const title = `${isPurchase ? (t.purchase_bill || t.purchase || 'Purchase Bill') : (t.payment_receipt || t.payment || 'Payment Receipt')} #${tx.bill_number || tx.id}`;
     
     const contentHtml = `
       <div class="header">

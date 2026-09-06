@@ -181,27 +181,27 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       records: filtered,
       isRTL,
       columns: [
-        { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
-        { header: t.date || 'Date' },
-        { header: t.customer_name || t.customers || 'Customer Name' },
-        { header: t.type || 'Type' },
-        { header: t.currency || 'Currency' },
-        { header: t.amount || 'Amount' },
-        { header: t.bill_number || 'Bill #' },
-        { header: t.description || 'Description' }
+        { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
+        { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
+        { header: t.customer_name || t.customers || 'Customer Name', style: 'width: 19%;' },
+        { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+        { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
+        { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
+        { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
+        { header: t.description || 'Description', style: 'width: 24%;' }
       ],
       renderRow: (e: RoznamchaEntry, _idx: number, globalIndex: number) => `
         <tr>
           <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
-          <td>
-            <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+          <td style="text-align: center;">
+            <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+            <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
           </td>
           <td><strong style="unicode-bidi:plaintext;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
-          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
-          <td><strong>${e.currency || 'AFN'}</strong></td>
-          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
-          <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
+          <td style="text-align: center;"><strong>${e.currency || 'AFN'}</strong></td>
+          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 700;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
+          <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
           <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
         </tr>
       `
@@ -218,7 +218,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
   const printSingleRoznamchaBill = (entry: RoznamchaEntry) => {
     const isRTL = document.documentElement.dir === 'rtl';
     const customer = customers.find(c => c.id === entry.customer_id);
-    const title = `${entry.type === 'income' ? (t.income || 'Income Receipt') : (t.expense || 'Expense Voucher')} #${entry.bill_number || entry.id}`;
+    const title = `${entry.type === 'income' ? (t.payment_receipt || t.income || 'Payment Receipt') : (t.purchase_bill || t.expense || 'Expense Voucher')} #${entry.bill_number || entry.id}`;
 
     const contentHtml = `
       <div class="header">

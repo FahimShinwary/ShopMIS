@@ -367,11 +367,11 @@ export default function Backup({
       records: roznamcha,
       isRTL: true,
       columns: [
-        { header: 'Date' },
-        { header: 'Type' },
-        { header: 'Amount' },
-        { header: 'Bill #' },
-        { header: 'Description' }
+        { header: 'Date', style: 'width: 14%; text-align: center;' },
+        { header: 'Type', style: 'width: 10%; text-align: center;' },
+        { header: 'Amount', style: 'width: 18%; text-align: end;' },
+        { header: 'Bill #', style: 'width: 16%; text-align: center;' },
+        { header: 'Description', style: 'width: 42%;' }
       ],
       renderRow: (r) => `
         <tr>

@@ -105,7 +105,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     width: 794px;
     min-height: 1123px;
     background: #ffffff;
-    padding: 22px 28px 48px 28px;
+    padding: 14px 16px 20px 16px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -125,70 +125,70 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
 
   .header {
     text-align: center !important;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     border-bottom: 2px solid #0f172a;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
   }
   .header.header-subsequent {
     text-align: inherit !important;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     border-bottom: 2px solid #0f172a;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
   }
   .header h1 {
-    margin: 0 0 2px 0;
+    margin: 0 0 1px 0;
     color: #0f172a;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: normal !important;
   }
   .header h2 {
-    margin: 2px 0;
+    margin: 1px 0;
     color: #1e293b;
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: normal !important;
   }
   .header h3 {
     margin: 1px 0;
     color: #475569;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    line-height: 1.25;
+    line-height: 1.2;
     letter-spacing: normal !important;
   }
   .header p {
     margin: 0;
     color: #475569;
-    font-size: 10.5px;
+    font-size: 9.5px;
     font-weight: 600;
     letter-spacing: normal !important;
   }
 
   .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   .summary-card {
     border: 1px solid #cbd5e1;
     background-color: #f8fafc;
-    padding: 5px 8px;
-    border-radius: 6px;
+    padding: 3px 8px;
+    border-radius: 5px;
   }
   .summary-card h3 {
     margin: 0;
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 700;
     color: #475569;
     letter-spacing: normal !important;
   }
   .summary-card p {
-    margin: 2px 0 0;
-    font-size: 12px;
+    margin: 1px 0 0;
+    font-size: 10.5px;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.2;
@@ -196,27 +196,44 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 4px;
-    margin-bottom: 4px;
-    background-color: #ffffff;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
+    background-color: #ffffff !important;
     letter-spacing: normal !important;
-    flex: 1 0 auto;
+    table-layout: fixed !important;
+    box-sizing: border-box !important;
   }
   
   th, td {
-    border: 1px solid #cbd5e1;
-    padding: 4px 6.5px;
-    font-size: 10px;
-    line-height: 1.25;
-    color: #0f172a;
-    vertical-align: middle;
+    border: 1px solid #cbd5e1 !important;
+    padding: 3.5px 4px !important;
+    font-size: 8.5px !important;
+    line-height: 1.3 !important;
+    color: #0f172a !important;
+    vertical-align: middle !important;
     text-align: ${isRTL ? 'right' : 'left'} !important;
     letter-spacing: normal !important;
     word-spacing: normal !important;
-    word-break: break-word;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: none !important;
+    -webkit-hyphens: none !important;
     unicode-bidi: plaintext;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  td {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: none !important;
   }
 
   /* Specific column alignment rules */
@@ -228,14 +245,27 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   th {
-    background-color: #f1f5f9;
-    font-weight: 800;
-    color: #0f172a;
-    padding: 5px 6.5px;
+    background-color: #f1f5f9 !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    padding: 4px 4px !important;
+    font-size: 8.5px !important;
     letter-spacing: normal !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    overflow: hidden !important;
   }
 
-  /* Status and badge color styles */
+  /* Status and badge color styles - preserve inline presentation without breaking layout */
+  .badge-income, .badge-expense, .badge-neutral {
+    word-break: normal !important;
+    display: inline-block;
+  }
+
   .badge-income {
     color: #15803d !important;
     font-weight: 800;
@@ -268,12 +298,12 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 10mm 12mm 18mm 12mm !important;
+      padding: 6mm 7mm 8mm 7mm !important;
       margin: 0 !important;
       width: 100% !important;
       min-height: 280mm !important;
-      height: 280mm !important;
-      max-height: 280mm !important;
+      height: auto !important;
+      max-height: 292mm !important;
       page-break-after: always !important;
       break-after: page !important;
       page-break-inside: avoid !important;
@@ -402,10 +432,10 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
   const hasSummary = Boolean(summaryHtml && summaryHtml.trim().length > 0);
   
   // Standard A4 capacities:
-  // Page 1: 20 records (if summary widget present) or 22 records (if no summary widget)
-  // Page 2+: 25 records (with standard official header)
-  const firstPageSize = firstPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : (hasSummary ? 20 : 22));
-  const subsequentPageSize = subsequentPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : 25);
+  // Page 1: 26 records (if summary widget present) or 30 records (if no summary widget)
+  // Page 2+: 32 records (with compact official header)
+  const firstPageSize = firstPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : (hasSummary ? 26 : 30));
+  const subsequentPageSize = subsequentPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : 32);
 
   const chunks = chunkReportRecords(records, firstPageSize, subsequentPageSize);
   const now = new Date();
@@ -414,6 +444,12 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
   const normalizedCols: ColumnDef[] = columns.map(c => 
     typeof c === 'string' ? { header: c } : c
   );
+
+  const colGroupHtml = `
+    <colgroup>
+      ${normalizedCols.map(c => `<col style="${c.style || ''}">`).join('')}
+    </colgroup>
+  `;
 
   const tableHeaderHtml = `
     <thead>
@@ -431,16 +467,17 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page">
           <div class="pdf-page-content">
             <div class="header">
-              <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
-              ${effectiveShopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
-              <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
-              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 12px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
-              <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${dateText || dateStr}</p>
+              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 13px; font-weight: 700; margin: 2px 0 1px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 9.5px; color: #64748b; margin: 1px 0 0 0;">${dateText || dateStr}</p>
             </div>
 
             ${summaryHtml ? summaryHtml : ''}
 
             <table>
+              ${colGroupHtml}
               ${tableHeaderHtml}
               <tbody>
                 <tr>
@@ -472,26 +509,26 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page-content">
           ${isFirstPage ? `
             <div class="header">
-              <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
-              ${effectiveShopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
-              <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
-              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 12px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
-              <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${dateText || dateStr}</p>
+              <h1 style="font-size: 17px; font-weight: 800; margin: 0 0 1px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 3px 0; font-size: 10px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 13px; font-weight: 700; margin: 2px 0 1px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 11px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 9.5px; color: #64748b; margin: 1px 0 0 0;">${dateText || dateStr}</p>
             </div>
             ${summaryHtml ? summaryHtml : ''}
           ` : `
             <div class="header header-subsequent">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div style="text-align: ${isRTL ? 'right' : 'left'};">
-                  <div style="font-size: 14px; font-weight: 800; color: #0f172a; line-height: 1.2;">
+                  <div style="font-size: 13px; font-weight: 800; color: #0f172a; line-height: 1.2;">
                     ${effectiveShopName}
                   </div>
-                  ${effectiveShopAddress ? `<div style="font-size: 10px; color: #475569; font-weight: 500; margin-top: 1px;">${effectiveShopAddress}</div>` : ''}
-                  <div style="font-size: 12px; font-weight: 700; color: #2563eb; margin-top: 3px;">
-                    ${title} ${subtitle && subtitle !== effectiveShopName ? `<span style="font-size: 11px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
+                  ${effectiveShopAddress ? `<div style="font-size: 9.5px; color: #475569; font-weight: 500; margin-top: 1px;">${effectiveShopAddress}</div>` : ''}
+                  <div style="font-size: 11px; font-weight: 700; color: #2563eb; margin-top: 2px;">
+                    ${title} ${subtitle && subtitle !== effectiveShopName ? `<span style="font-size: 10px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
                   </div>
                 </div>
-                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 10.5px; color: #475569; font-weight: 600; white-space: nowrap;">
+                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 9.5px; color: #475569; font-weight: 600; white-space: nowrap;">
                   <div>${dateText || dateStr}</div>
                 </div>
               </div>
@@ -499,6 +536,7 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
           `}
 
           <table>
+            ${colGroupHtml}
             ${tableHeaderHtml}
             <tbody>
               ${rowsHtml}
@@ -891,11 +929,13 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
             background: #ffffff;
             width: 794px;
             overflow: visible;
+            box-sizing: border-box;
           }
           .pdf-pages-wrapper {
             margin: 0;
             padding: 0;
             gap: 0;
+            width: 794px;
           }
           .pdf-page {
             width: 794px;
@@ -903,6 +943,7 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
             box-sizing: border-box;
             background: #ffffff;
             margin: 0;
+            padding: 14px 16px 20px 16px;
             border: none;
             box-shadow: none;
             border-radius: 0;
@@ -933,10 +974,10 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
 
     updateProgress(0, totalPages);
 
-    const renderScale = 1.25; // Crisp ~150-180 DPI for A4 with minimal memory and maximum speed
+    const renderScale = 1.33; // Crisp ~160 DPI for A4 with minimal memory and maximum speed
     const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
-    const margin = 7; // 7mm margins
+    const margin = 5; // 5mm margins
     const printableWidth = pageWidth - (margin * 2);
     const printableHeight = pageHeight - (margin * 2);
 
@@ -960,14 +1001,14 @@ export async function downloadPDFDirectly(options: PDFReportOptions): Promise<vo
         logging: false,
         imageTimeout: 0,
         backgroundColor: '#ffffff',
+        width: 794,
         windowWidth: 794,
-        windowHeight: 1123,
         scrollX: 0,
         scrollY: 0
       });
 
       if (canvas && canvas.width > 0 && canvas.height > 0) {
-        const imgData = canvas.toDataURL('image/jpeg', 0.82);
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
         const imgHeight = (canvas.height * printableWidth) / canvas.width;
         const renderHeight = Math.min(imgHeight, printableHeight);
 

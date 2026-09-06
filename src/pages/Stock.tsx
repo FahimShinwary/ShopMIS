@@ -140,20 +140,20 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
           <p style="color: #0f172a; font-weight: 800;">${(totalStockIn - totalStockOut).toLocaleString()}</p>
         </div>
         <div class="summary-card">
-          <h3>Total Entries</h3>
+          <h3>${t.total_entries || 'Total Entries'}</h3>
           <p style="color: #0f172a;">${filtered.length}</p>
         </div>
       </div>
     `;
 
     const columns = [
-      { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
-      { header: t.date || 'Date' },
-      { header: t.item_name || 'Item Name' },
-      { header: t.type || 'Type' },
-      { header: t.quantity || 'Quantity' },
-      { header: t.bill_number || 'Bill #' },
-      { header: t.description || 'Description' }
+      { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
+      { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
+      { header: t.item_name || 'Item Name', style: 'width: 22%;' },
+      { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+      { header: t.quantity || 'Quantity', style: 'width: 11%; text-align: end;' },
+      { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
+      { header: t.description || 'Description', style: 'width: 28%;' }
     ];
 
     const contentHtml = createPaginatedReportHtml<StockEntry>({
@@ -161,7 +161,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
       subtitle: shopName,
       shopName,
       shopAddress,
-      dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
+      dateText: `${t.generated_on || 'Generated on'} ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filtered,
       isRTL,
@@ -169,14 +169,14 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
       renderRow: (e: StockEntry, _idx: number, globalIndex: number) => `
         <tr>
           <td style="text-align: center; color: #64748b; font-weight: bold;">${globalIndex + 1}</td>
-          <td>
-            <div style="font-weight:700">${formatShamsi(e.date, 'YYYY/MM/DD')} (${formatShamsi(e.date, 'full')})</div>
-            <div style="font-size:10px; color:#2563eb; font-family:monospace; font-weight:bold;">USA: ${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+          <td style="text-align: center;">
+            <div style="font-weight:700;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
+            <div style="font-size:8px; color:#475569;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
           </td>
           <td><strong style="unicode-bidi:plaintext;">${e.item_name}</strong></td>
-          <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
-          <td style="font-weight: 700;">${e.quantity.toLocaleString()}</td>
-          <td>${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+          <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
+          <td style="text-align: end; font-weight: 700;">${e.quantity.toLocaleString()}</td>
+          <td style="text-align: center;">${e.bill_number ? `<span style="font-weight:700; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
           <td><span style="unicode-bidi:plaintext;">${e.description || '-'}</span></td>
         </tr>
       `
@@ -192,7 +192,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
 
   const printSingleStockVoucher = (entry: StockEntry) => {
     const isRTL = document.documentElement.dir === 'rtl';
-    const title = `${entry.type === 'in' ? (t.stock_in || 'Stock In Note') : (t.stock_out || 'Stock Out Note')} #${entry.bill_number || entry.id}`;
+    const title = `${entry.type === 'in' ? (t.stock_in_note || t.stock_in || 'Stock In Note') : (t.stock_out_note || t.stock_out || 'Stock Out Note')} #${entry.bill_number || entry.id}`;
 
     const contentHtml = `
       <div class="header">
@@ -208,7 +208,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
           <div><strong>${t.bill_number || 'Bill #'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${entry.bill_number || '-'}</span></div>
         </div>
         <div style="display:flex; justify-content:space-between;">
-          <div><strong>${t.type || 'Movement Type'}:</strong> ${entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</div>
+          <div><strong>${t.movement_type || t.type || 'Movement Type'}:</strong> ${entry.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</div>
           <div><strong>${t.quantity || 'Quantity'}:</strong> <span style="font-weight:800;">${entry.quantity.toLocaleString()}</span></div>
         </div>
       </div>

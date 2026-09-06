@@ -63,11 +63,11 @@ export default function Customers({ t, query, customers, shopName, shopAddress, 
       records: filteredCustomers,
       isRTL,
       columns: [
-        { header: t.record_no || 'No.', style: 'width: 36px; text-align: center;' },
-        { header: 'ID', style: 'width: 50px; text-align: center;' },
-        { header: t.customer_name || 'Customer Name' },
-        { header: t.address || 'Address' },
-        { header: t.contact || 'Contact / Phone' }
+        { header: t.record_no || 'No.', style: 'width: 6%; text-align: center;' },
+        { header: t.id || 'ID', style: 'width: 8%; text-align: center;' },
+        { header: t.customer_name || 'Customer Name', style: 'width: 28%;' },
+        { header: t.address || 'Address', style: 'width: 38%;' },
+        { header: t.contact || t.phone || 'Contact / Phone', style: 'width: 20%; text-align: center;' }
       ],
       renderRow: (c, _idx, globalIndex) => `
         <tr>
