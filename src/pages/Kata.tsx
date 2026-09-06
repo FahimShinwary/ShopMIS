@@ -36,13 +36,15 @@ interface KataProps {
   query: string;
   dateFilter: { start: string; end: string };
   billFilter: string;
+  shopName?: string;
+  shopAddress?: string;
   onAdd: (data: any) => Promise<void>;
   onAddClick: () => void;
   onEdit: (entry: any) => void;
   onDelete: (id: number) => Promise<void>;
 }
 
-export default function Kata({ transactions, summaries, customers, t, query, dateFilter, billFilter, onAdd, onAddClick, onEdit, onDelete }: KataProps) {
+export default function Kata({ transactions, summaries, customers, t, query, dateFilter, billFilter, shopName, shopAddress, onAdd, onAddClick, onEdit, onDelete }: KataProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<KataSummary | null>(null);
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,6 +176,9 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
 
     const contentHtml = createPaginatedReportHtml<KataTransaction>({
       title,
+      subtitle: shopName,
+      shopName,
+      shopAddress,
       dateText: `Generated on ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filteredTransactions,
@@ -214,8 +219,10 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
     
     const contentHtml = `
       <div class="header">
-        <h1>${title}</h1>
-        <p>${formatShamsi(tx.date, 'full')} | USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</p>
+        ${shopName ? `<h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${shopName}</h1>` : ''}
+        ${shopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${shopAddress}</p>` : ''}
+        <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+        <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${formatShamsi(tx.date, 'full')} | USA: ${format(new Date(tx.date), 'yyyy-MM-dd')}</p>
       </div>
 
       <div style="border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:20px; background:#f8fafc;">
@@ -248,10 +255,6 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           </tr>
         </tbody>
       </table>
-
-      <div class="footer">
-        <p>Shop MIS System - Verified Transaction Document</p>
-      </div>
     `;
 
     openPrintablePDFWindow({

@@ -20,12 +20,14 @@ interface RoznamchaProps {
   dateFilter: { start: string; end: string };
   billFilter: string;
   isAdmin?: boolean;
+  shopName?: string;
+  shopAddress?: string;
   onAdd: (data: any) => Promise<void>;
   onEdit: (entry: RoznamchaEntry) => void;
   onDelete: (id: number) => Promise<void>;
 }
 
-export default function Roznamcha({ data, customers, t, query, dateFilter, billFilter, isAdmin, onAdd, onEdit, onDelete }: RoznamchaProps) {
+export default function Roznamcha({ data, customers, t, query, dateFilter, billFilter, isAdmin, shopName, shopAddress, onAdd, onEdit, onDelete }: RoznamchaProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -171,6 +173,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
 
     const contentHtml = createPaginatedReportHtml<RoznamchaEntry>({
       title: reportTitle,
+      subtitle: shopName,
+      shopName,
+      shopAddress,
       dateText,
       summaryHtml,
       records: filtered,
@@ -217,8 +222,10 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
 
     const contentHtml = `
       <div class="header">
-        <h1>${title}</h1>
-        <p>${formatShamsi(entry.date, 'full')} | USA: ${format(new Date(entry.date), 'yyyy-MM-dd')}</p>
+        ${shopName ? `<h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${shopName}</h1>` : ''}
+        ${shopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${shopAddress}</p>` : ''}
+        <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+        <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${formatShamsi(entry.date, 'full')} | USA: ${format(new Date(entry.date), 'yyyy-MM-dd')}</p>
       </div>
 
       <div style="border:1px solid #cbd5e1; border-radius:8px; padding:16px; margin-bottom:20px; background:#f8fafc;">
@@ -250,10 +257,6 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
           </tr>
         </tbody>
       </table>
-
-      <div class="footer">
-        <p>Shop MIS System - Official Roznamcha Voucher</p>
-      </div>
     `;
 
     openPrintablePDFWindow({

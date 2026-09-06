@@ -11,12 +11,14 @@ interface CustomersProps {
   t: any;
   query: string;
   customers: Customer[];
+  shopName?: string;
+  shopAddress?: string;
   onAdd: () => void;
   onEdit: (customer: Customer) => void;
   onDelete: (id: number) => void;
 }
 
-export default function Customers({ t, query, customers, onAdd, onEdit, onDelete }: CustomersProps) {
+export default function Customers({ t, query, customers, shopName, shopAddress, onAdd, onEdit, onDelete }: CustomersProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
@@ -53,6 +55,9 @@ export default function Customers({ t, query, customers, onAdd, onEdit, onDelete
 
     const contentHtml = createPaginatedReportHtml({
       title,
+      subtitle: shopName,
+      shopName,
+      shopAddress,
       dateText: `${t.total_customers || 'Total Customers'}: ${filteredCustomers.length}`,
       summaryHtml,
       records: filteredCustomers,

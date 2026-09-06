@@ -105,11 +105,11 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     width: 794px;
     min-height: 1123px;
     background: #ffffff;
-    padding: 22px 28px 18px 28px;
+    padding: 22px 28px 48px 28px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     position: relative;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
@@ -148,6 +148,14 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
     color: #1e293b;
     font-size: 13px;
     font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: normal !important;
+  }
+  .header h3 {
+    margin: 1px 0;
+    color: #475569;
+    font-size: 11.5px;
+    font-weight: 600;
     line-height: 1.25;
     letter-spacing: normal !important;
   }
@@ -242,17 +250,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
   }
 
   .footer, .pdf-page .footer {
-    flex-shrink: 0;
-    margin-top: 8px;
-    text-align: center !important;
-    font-size: 10.5px;
-    color: #475569;
-    border-top: 1.5px solid #cbd5e1;
-    padding-top: 6px;
-    letter-spacing: normal !important;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: none !important;
   }
 
   @media print {
@@ -270,7 +268,7 @@ export const getStandardPrintCss = (isRTL: boolean = true): string => `
       border: none !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      padding: 10mm 12mm 8mm 12mm !important;
+      padding: 10mm 12mm 18mm 12mm !important;
       margin: 0 !important;
       width: 100% !important;
       min-height: 280mm !important;
@@ -353,9 +351,31 @@ export function chunkReportRecords<T>(
 }
 
 /**
+ * Retrieve saved shop information from settings in localStorage or fallback to defaults.
+ */
+export function getSavedShopInfo(): { name: string; address: string } {
+  try {
+    const saved = localStorage.getItem('shop_info');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          name: parsed.name || 'Kabul Electronics',
+          address: parsed.address || 'Jade-e-Maiwand, Kabul, Afghanistan'
+        };
+      }
+    }
+  } catch (e) {}
+  return {
+    name: 'Kabul Electronics',
+    address: 'Jade-e-Maiwand, Kabul, Afghanistan'
+  };
+}
+
+/**
  * Generates an A4 print-ready, multi-page HTML report where records fill all the way
- * down to the footer on each page, subsequent pages start right after a normal header,
- * and page numbers are continuous and clear.
+ * down to the footer area on each page, subsequent pages start right after an official header
+ * showing the Shop Name, Address, and Report Title, with no footers printed or copied to Excel.
  */
 export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>): string {
   const {
@@ -372,20 +392,22 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
     subsequentPageRecords,
     renderRow,
     emptyMessage = 'No records found',
-    isRTL = true,
-    footerNote = 'Shop MIS System'
+    isRTL = true
   } = options;
+
+  const savedShop = getSavedShopInfo();
+  const effectiveShopName = shopName || savedShop.name;
+  const effectiveShopAddress = shopAddress || savedShop.address;
 
   const hasSummary = Boolean(summaryHtml && summaryHtml.trim().length > 0);
   
   // Standard A4 capacities:
   // Page 1: 20 records (if summary widget present) or 22 records (if no summary widget)
-  // Page 2+: 25 records (with standard official header and footer)
+  // Page 2+: 25 records (with standard official header)
   const firstPageSize = firstPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : (hasSummary ? 20 : 22));
   const subsequentPageSize = subsequentPageRecords || (recordsPerPage && recordsPerPage > 10 ? recordsPerPage : 25);
 
   const chunks = chunkReportRecords(records, firstPageSize, subsequentPageSize);
-  const totalPages = Math.max(1, chunks.length);
   const now = new Date();
   const dateStr = `${formatShamsi(now, 'full')} | USA: ${now.toISOString().split('T')[0]}`;
 
@@ -409,11 +431,11 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page">
           <div class="pdf-page-content">
             <div class="header">
-              ${shopName ? `<h1 style="font-size: 20px; margin-bottom: 2px;">${shopName}</h1>` : ''}
-              ${shopAddress ? `<p style="margin-bottom: 4px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
-              <h1 style="font-size: 17px; margin-bottom: 2px;">${title}</h1>
-              ${subtitle ? `<h2>${subtitle}</h2>` : ''}
-              <p>${dateText || dateStr}</p>
+              <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 12px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${dateText || dateStr}</p>
             </div>
 
             ${summaryHtml ? summaryHtml : ''}
@@ -428,12 +450,6 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
                 </tr>
               </tbody>
             </table>
-          </div>
-
-          <div class="footer">
-            <span>${footerNote}</span>
-            <span style="font-weight: 700;">${isRTL ? `پاڼه ۱ له ۱` : `Page 1 of 1`}</span>
-            <span>${dateStr}</span>
           </div>
         </div>
       </div>
@@ -456,23 +472,26 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
         <div class="pdf-page-content">
           ${isFirstPage ? `
             <div class="header">
-              ${shopName ? `<h1 style="font-size: 20px; margin-bottom: 2px;">${shopName}</h1>` : ''}
-              ${shopAddress ? `<p style="margin-bottom: 4px; font-size: 11px; color: #64748b;">${shopAddress}</p>` : ''}
-              <h1 style="font-size: 17px; margin-bottom: 2px;">${title}</h1>
-              ${subtitle ? `<h2>${subtitle}</h2>` : ''}
-              <p>${dateText || dateStr}</p>
+              <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 2px 0; color: #0f172a; line-height: 1.2;">${effectiveShopName}</h1>
+              ${effectiveShopAddress ? `<p style="margin: 0 0 6px 0; font-size: 11px; color: #475569; font-weight: 600;">${effectiveShopAddress}</p>` : ''}
+              <h2 style="font-size: 16px; font-weight: 700; margin: 3px 0 2px 0; color: #1e293b; line-height: 1.2;">${title}</h2>
+              ${subtitle && subtitle !== effectiveShopName ? `<h3 style="font-size: 12px; font-weight: 600; color: #475569; margin: 1px 0;">${subtitle}</h3>` : ''}
+              <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">${dateText || dateStr}</p>
             </div>
             ${summaryHtml ? summaryHtml : ''}
           ` : `
             <div class="header header-subsequent">
-              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div style="text-align: ${isRTL ? 'right' : 'left'};">
-                  <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a;">
-                    ${title} ${subtitle ? `<span style="font-size: 12px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
-                  </h2>
-                  ${shopName ? `<div style="font-size: 11px; font-weight: 700; color: #2563eb; margin-top: 2px;">${shopName}</div>` : ''}
+                  <div style="font-size: 14px; font-weight: 800; color: #0f172a; line-height: 1.2;">
+                    ${effectiveShopName}
+                  </div>
+                  ${effectiveShopAddress ? `<div style="font-size: 10px; color: #475569; font-weight: 500; margin-top: 1px;">${effectiveShopAddress}</div>` : ''}
+                  <div style="font-size: 12px; font-weight: 700; color: #2563eb; margin-top: 3px;">
+                    ${title} ${subtitle && subtitle !== effectiveShopName ? `<span style="font-size: 11px; font-weight: 600; color: #475569;">(${subtitle})</span>` : ''}
+                  </div>
                 </div>
-                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 10.5px; color: #475569; font-weight: 600;">
+                <div style="text-align: ${isRTL ? 'left' : 'right'}; font-size: 10.5px; color: #475569; font-weight: 600; white-space: nowrap;">
                   <div>${dateText || dateStr}</div>
                 </div>
               </div>
@@ -485,12 +504,6 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
               ${rowsHtml}
             </tbody>
           </table>
-        </div>
-
-        <div class="footer">
-          <span>${footerNote}</span>
-          <span style="font-weight: 700;">${isRTL ? `پاڼه ${pageNumber} له ${totalPages}` : `Page ${pageNumber} of ${totalPages}`}</span>
-          <span>${dateStr}</span>
         </div>
       </div>
     `;
@@ -568,6 +581,13 @@ export const getStandardPrintHtml = (
         .btn-primary:hover {
           background-color: #1d4ed8;
         }
+        .btn-secondary {
+          background-color: #0f172a;
+          color: #ffffff;
+        }
+        .btn-secondary:hover {
+          background-color: #1e293b;
+        }
 
         .pdf-wrapper {
           padding: 24px;
@@ -595,6 +615,10 @@ export const getStandardPrintHtml = (
           </div>
         </div>
         <div class="btn-group">
+          <button class="btn btn-secondary" id="copy-excel-btn" onclick="copyTableDataForExcel()" title="Copy all records without headers or footers directly for Excel">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"></path></svg>
+            ${isRTL ? 'د ټولو ریکارډونو کاپي (Excel)' : 'Copy Records for Excel'}
+          </button>
           <button class="btn btn-primary" onclick="window.print()">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"></path></svg>
             ${isRTL ? 'چاپ / Save as PDF' : 'Print / Save as PDF'}
@@ -609,6 +633,73 @@ export const getStandardPrintHtml = (
       </div>
 
       <script>
+        function copyTableDataForExcel() {
+          var tables = document.querySelectorAll('#pdf-content table');
+          if (!tables || tables.length === 0) return;
+          var rowsOutput = [];
+          
+          var headerThs = tables[0].querySelectorAll('thead th');
+          if (headerThs && headerThs.length > 0) {
+            var headerRow = [];
+            for (var h = 0; h < headerThs.length; h++) {
+              headerRow.push(headerThs[h].innerText.replace(/[\\r\\n\\t]+/g, ' ').trim());
+            }
+            rowsOutput.push(headerRow.join('\\t'));
+          }
+          
+          for (var t = 0; t < tables.length; t++) {
+            var trs = tables[t].querySelectorAll('tbody tr');
+            for (var r = 0; r < trs.length; r++) {
+              var tds = trs[r].querySelectorAll('td');
+              if (tds.length === 1 && tds[0].hasAttribute('colspan')) continue;
+              var rowCells = [];
+              for (var c = 0; c < tds.length; c++) {
+                rowCells.push(tds[c].innerText.replace(/[\\r\\n\\t]+/g, ' ').trim());
+              }
+              if (rowCells.length > 0 && rowCells.some(function(v) { return v.length > 0; })) {
+                rowsOutput.push(rowCells.join('\\t'));
+              }
+            }
+          }
+          
+          var tsvData = rowsOutput.join('\\n');
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(tsvData).then(function() {
+              showCopiedFeedback();
+            }).catch(function() {
+              fallbackCopy(tsvData);
+            });
+          } else {
+            fallbackCopy(tsvData);
+          }
+        }
+
+        function fallbackCopy(text) {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            showCopiedFeedback();
+          } catch (e) {}
+          document.body.removeChild(ta);
+        }
+
+        function showCopiedFeedback() {
+          var btn = document.getElementById('copy-excel-btn');
+          if (!btn) return;
+          var origText = btn.innerHTML;
+          btn.style.backgroundColor = '#16a34a';
+          btn.innerHTML = '✓ ' + (${isRTL ? `'ریکارډونه کاپي شول (Excel)'` : `'Copied for Excel!'`});
+          setTimeout(function() {
+            btn.innerHTML = origText;
+            btn.style.backgroundColor = '';
+          }, 2500);
+        }
+
         window.onload = function() {
           if (${autoPrint ? 'true' : 'false'}) {
             if (document.fonts && document.fonts.ready) {

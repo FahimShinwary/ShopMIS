@@ -58,9 +58,18 @@ function AppContent() {
     }
     return null;
   });
-  const [shopInfo, setShopInfo] = useState({
-    name: 'Kabul Electronics',
-    address: 'Jade-e-Maiwand, Kabul, Afghanistan'
+  const [shopInfo, setShopInfo] = useState(() => {
+    try {
+      const saved = localStorage.getItem('shop_info');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.name || parsed.address)) return parsed;
+      }
+    } catch (e) {}
+    return {
+      name: 'Kabul Electronics',
+      address: 'Jade-e-Maiwand, Kabul, Afghanistan'
+    };
   });
   const [adminSettings, setAdminSettings] = useState({
     username: 'admin',
@@ -178,7 +187,12 @@ function AppContent() {
         if (shopInfoRow) {
           try {
             const parsed = typeof shopInfoRow.value === 'string' ? JSON.parse(shopInfoRow.value) : shopInfoRow.value;
-            if (parsed && (parsed.name || parsed.address)) setShopInfo(parsed);
+            if (parsed && (parsed.name || parsed.address)) {
+              setShopInfo(parsed);
+              try {
+                localStorage.setItem('shop_info', JSON.stringify(parsed));
+              } catch (e) {}
+            }
           } catch (e) {
             console.error('Failed to parse shop_info:', e);
           }
@@ -200,7 +214,12 @@ function AppContent() {
 
         if (shopRes.ok) {
           const shopData = await shopRes.json();
-          if (shopData && (shopData.name || shopData.address)) setShopInfo(shopData);
+          if (shopData && (shopData.name || shopData.address)) {
+            setShopInfo(shopData);
+            try {
+              localStorage.setItem('shop_info', JSON.stringify(shopData));
+            } catch (e) {}
+          }
         }
         if (adminRes.ok) {
           const adminData = await adminRes.json();
@@ -382,6 +401,9 @@ function AppContent() {
 
   const handleUpdateShopInfo = async (newShopInfo: typeof shopInfo) => {
     setShopInfo(newShopInfo);
+    try {
+      localStorage.setItem('shop_info', JSON.stringify(newShopInfo));
+    } catch (e) {}
     try {
       if (window.electronAPI) {
         await window.electronAPI.setSetting('shop_info', newShopInfo);
@@ -770,6 +792,8 @@ function AppContent() {
             dateFilter={dateFilter}
             billFilter={billFilter}
             isAdmin={user?.role === 'admin' || user?.role === 'developer'}
+            shopName={shopInfo.name}
+            shopAddress={shopInfo.address}
             onAdd={handleAddEntry} 
             onEdit={handleEditEntry}
             onDelete={handleDeleteEntry}
@@ -785,6 +809,8 @@ function AppContent() {
             query={searchQuery} 
             dateFilter={dateFilter}
             billFilter={billFilter}
+            shopName={shopInfo.name}
+            shopAddress={shopInfo.address}
             onAdd={handleAddEntry} 
             onAddClick={() => {
               setEditingEntry(null);
@@ -800,6 +826,8 @@ function AppContent() {
             t={t} 
             query={searchQuery} 
             customers={customers}
+            shopName={shopInfo.name}
+            shopAddress={shopInfo.address}
             onAdd={() => {
               setEditingCustomer(null);
               setCustomerModalError(null);
@@ -850,6 +878,8 @@ function AppContent() {
             query={searchQuery} 
             dateFilter={dateFilter}
             billFilter={billFilter}
+            shopName={shopInfo.name}
+            shopAddress={shopInfo.address}
             onAdd={handleAddEntry} 
             onEdit={handleEditEntry}
             onDelete={handleDeleteEntry}
