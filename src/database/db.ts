@@ -310,6 +310,12 @@ export const getDb = () => {
           dbInstance.exec("UPDATE stock SET quantity = quantity_out");
         }
       }
+      // Normalize any untrimmed item names in stock
+      try {
+        dbInstance.exec("UPDATE stock SET item_name = TRIM(item_name) WHERE item_name != TRIM(item_name)");
+      } catch (trimErr) {
+        console.warn('Could not run stock item_name TRIM cleanup:', trimErr);
+      }
 
       const roznamchaInfo = dbInstance.prepare("PRAGMA table_info(roznamcha)").all() as any[];
       if (!roznamchaInfo.find((c: any) => c.name === 'customer_id')) {

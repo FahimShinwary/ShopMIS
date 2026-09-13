@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { 
   Plus, 
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertPersianDigits } from '../lib/utils';
-import { formatShamsi, isDateInRange } from '../lib/shamsi';
+import { formatShamsi, isDateInRange, getTodayShamsi } from '../lib/shamsi';
 import { StockEntry } from '../types';
 import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
 import { ShamsiDatePicker } from '../components/ShamsiDatePicker';
@@ -40,17 +40,19 @@ interface StockProps {
 
 export default function Stock({ data, t, query, dateFilter, billFilter, shopName, shopAddress, onAdd, onEdit, onDelete }: StockProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formDate, setFormDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState<string>(() => getTodayShamsi().gregStr);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = React.useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [inventoryPage, setInventoryPage] = useState(1);
   const [itemNameInput, setItemNameInput] = useState('');
   const [showItemSuggestions, setShowItemSuggestions] = useState(false);
   const itemsPerPage = 10;
+  const inventoryItemsPerPage = 16;
 
   const existingItemNames = useMemo(() => {
-    const names = data.map(d => d.item_name).filter(Boolean);
+    const names = data.map(d => (d.item_name || '').trim()).filter(Boolean);
     return Array.from(new Set(names));
   }, [data]);
 
@@ -100,12 +102,14 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
     const q = query.toLowerCase().trim();
     
     data.forEach(e => {
-      if (!summary[e.item_name]) {
-        summary[e.item_name] = { in: 0, out: 0, balance: 0 };
+      const cleanName = (e.item_name || '').trim();
+      if (!cleanName) return;
+      if (!summary[cleanName]) {
+        summary[cleanName] = { in: 0, out: 0, balance: 0 };
       }
-      if (e.type === 'in') summary[e.item_name].in += e.quantity;
-      else summary[e.item_name].out += e.quantity;
-      summary[e.item_name].balance = summary[e.item_name].in - summary[e.item_name].out;
+      if (e.type === 'in') summary[cleanName].in += e.quantity;
+      else summary[cleanName].out += e.quantity;
+      summary[cleanName].balance = summary[cleanName].in - summary[cleanName].out;
     });
 
     return Object.entries(summary).map(([name, stats]) => ({
@@ -119,6 +123,22 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
       item.balance.toString().includes(q)
     );
   }, [data, query]);
+
+  const totalInventoryPages = Math.ceil(inventorySummary.length / inventoryItemsPerPage) || 1;
+  const paginatedInventorySummary = useMemo(() => {
+    const start = (inventoryPage - 1) * inventoryItemsPerPage;
+    return inventorySummary.slice(start, start + inventoryItemsPerPage);
+  }, [inventorySummary, inventoryPage, inventoryItemsPerPage]);
+
+  useEffect(() => {
+    setInventoryPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    if (inventoryPage > totalInventoryPages) {
+      setInventoryPage(Math.max(1, totalInventoryPages));
+    }
+  }, [totalInventoryPages, inventoryPage]);
 
   const buildStockReportData = () => {
     const isRTL = document.documentElement.dir === 'rtl';
@@ -278,11 +298,14 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
     setIsSubmitting(true);
     try {
       const entryData = Object.fromEntries(formData.entries());
+      const cleanItemName = (itemNameInput || (entryData.item_name as string) || '').trim();
       await onAdd({
         ...entryData,
+        item_name: cleanItemName,
         quantity: Number(entryData.quantity)
       });
       setIsFormOpen(false);
+      setFormDate(getTodayShamsi().gregStr);
       setErrors({});
       setItemNameInput('');
       (e.target as HTMLFormElement).reset();
@@ -317,6 +340,9 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
           </button>
           <button
             onClick={() => {
+              if (!isFormOpen) {
+                setFormDate(getTodayShamsi().gregStr);
+              }
               setIsFormOpen(!isFormOpen);
               setErrors({});
             }}
@@ -347,6 +373,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
                   <ShamsiDatePicker
                     value={formDate}
                     onChange={(gregStr) => setFormDate(gregStr)}
+                    lang={t.today === 'نن' ? 'ps' : t.today === 'امروز' ? 'dr' : 'en'}
                   />
                   <input type="hidden" name="date" value={formDate} />
                 </div>
@@ -380,12 +407,12 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
                           key={name}
                           type="button"
                           onMouseDown={() => {
-                            setItemNameInput(name);
+                            setItemNameInput(name.trim());
                             setShowItemSuggestions(false);
                           }}
                           className="w-full text-start px-4 py-2.5 text-sm hover:bg-muted font-medium transition-colors flex items-center justify-between"
                         >
-                          <span>{name}</span>
+                          <span>{name.trim()}</span>
                           <span className="text-[10px] bg-brand-500/10 text-brand-500 px-2 py-0.5 rounded-full font-bold">Existing Item</span>
                         </button>
                       ))}
@@ -495,17 +522,24 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
 
       {/* Inventory Summary */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
-          <Layers className="text-brand-500" size={20} />
-          {t.stock_inventory || 'Stock Inventory'}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
+            <Layers className="text-brand-500" size={20} />
+            {t.stock_inventory || 'Stock Inventory'}
+          </h3>
+          {inventorySummary.length > 0 && (
+            <span className="text-xs font-bold text-muted-foreground">
+              {inventorySummary.length} {t.items || 'Items'}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {inventorySummary.map((item, index) => (
+          {paginatedInventorySummary.map((item, index) => (
             <motion.div
               key={item.name}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.02 }}
               className="bg-card border border-border rounded-2xl p-4 shadow-soft"
             >
               <div className="flex items-center justify-between mb-2">
@@ -539,6 +573,16 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
             </div>
           )}
         </div>
+
+        {/* Stock Inventory Pagination */}
+        <Pagination
+          currentPage={inventoryPage}
+          totalPages={totalInventoryPages}
+          totalItems={inventorySummary.length}
+          itemsPerPage={inventoryItemsPerPage}
+          onPageChange={(p) => setInventoryPage(p)}
+          t={t}
+        />
       </div>
 
       {/* Table View */}

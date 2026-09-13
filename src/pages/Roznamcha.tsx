@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertPersianDigits } from '../lib/utils';
 import { formatShamsi, isDateInRange, getTodayShamsi } from '../lib/shamsi';
 import { RoznamchaEntry, Customer } from '../types';
-import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml, generateMultiCurrencySummaryHtml } from '../lib/pdfUtils';
 import CustomerSelect from '../components/CustomerSelect';
 import { ShamsiDatePicker } from '../components/ShamsiDatePicker';
 import NumericInput from '../components/NumericInput';
@@ -35,7 +35,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
   const isSubmittingRef = React.useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | undefined>();
-  const [formDate, setFormDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState<string>(() => getTodayShamsi().gregStr);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -136,6 +136,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       entryData.customer_id = selectedCustomerId as any;
       await onAdd(entryData);
       setIsFormOpen(false);
+      setFormDate(getTodayShamsi().gregStr);
       setErrors({});
       setSelectedCustomerId(undefined);
       (e.target as HTMLFormElement).reset();
@@ -150,26 +151,47 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
     const reportTitle = `${t.roznamcha || 'Roznamcha'} ${t.report || 'Report'}`;
     const dateText = `${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : (t.all || 'All')} ${t.to || 'to'} ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : formatShamsi(new Date(), 'full')}`;
 
-    const summaryHtml = `
-      <div class="summary-grid">
-        <div class="summary-card">
-          <h3>${t.total_income || 'Total Income'}</h3>
-          <p class="badge-income">${totals.income.toLocaleString()} AFN</p>
-        </div>
-        <div class="summary-card">
-          <h3>${t.total_expense || 'Total Expense'}</h3>
-          <p class="badge-expense">${totals.expense.toLocaleString()} AFN</p>
-        </div>
-        <div class="summary-card">
-          <h3>Net Balance</h3>
-          <p class="${(totals.income - totals.expense) >= 0 ? 'badge-income' : 'badge-expense'}">${(totals.income - totals.expense).toLocaleString()} AFN</p>
-        </div>
-        <div class="summary-card">
-          <h3>Total Records</h3>
-          <p style="color: #0f172a;">${filtered.length}</p>
-        </div>
-      </div>
-    `;
+    const currenciesPresent = Array.from(new Set<string>(filtered.map(e => (e.currency as string) || 'AFN'))).filter(Boolean);
+    const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+    const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+    activeCurrencies.sort((a, b) => {
+      const idxA = preferredOrder.indexOf(a);
+      const idxB = preferredOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    const summaryItems = activeCurrencies.map(curr => {
+      const entries = filtered.filter(e => (e.currency || 'AFN') === curr);
+      const income = entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+      const expense = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+      const balance = income - expense;
+      return {
+        currency: curr,
+        primaryLabel: t.total_income || 'Total Income',
+        primaryAmount: income,
+        primaryColor: '#15803d',
+        primaryPrefix: '+',
+        secondaryLabel: t.total_expense || 'Total Expense',
+        secondaryAmount: expense,
+        secondaryColor: '#b91c1c',
+        secondaryPrefix: '-',
+        balanceLabel: t.net_cashflow || 'Net Balance',
+        balanceAmount: balance,
+        balanceColor: balance >= 0 ? '#15803d' : '#b91c1c',
+        count: entries.length
+      };
+    });
+
+    const summaryHtml = generateMultiCurrencySummaryHtml({
+      currencies: summaryItems,
+      totalRecords: filtered.length,
+      totalRecordsLabel: t.total_records || 'Total Records',
+      sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+      isRTL
+    });
 
     const contentHtml = createPaginatedReportHtml<RoznamchaEntry>({
       title: reportTitle,
@@ -179,6 +201,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
       dateText,
       summaryHtml,
       records: filtered,
+      firstPageRecords: activeCurrencies.length > 2 ? 8 : 10,
       isRTL,
       columns: [
         { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
@@ -198,9 +221,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
             <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
           </td>
           <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${customers.find(c => c.id === e.customer_id)?.name || '-'}</strong></td>
-          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</td>
+          <td class="${e.type === 'income' ? 'val-payment' : 'val-purchase'}" style="text-align: center; color: ${e.type === 'income' ? '#15803d' : '#b91c1c'} !important; font-weight: 800;">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
           <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${e.currency || 'AFN'}</strong></td>
-          <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
+          <td class="${e.type === 'income' ? 'val-payment' : 'val-purchase'}" style="text-align: end; font-weight: 800; color: ${e.type === 'income' ? '#15803d' : '#b91c1c'} !important;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${e.currency || 'AFN'}</td>
           <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
           <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
         </tr>
@@ -234,7 +257,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
           <div><strong>${t.bill_number || 'Bill #'}:</strong> <span style="unicode-bidi:plaintext; font-weight:700;">${entry.bill_number || '-'}</span></div>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-          <div><strong>${t.type || 'Type'}:</strong> ${entry.type === 'income' ? (t.income || 'Income') : (t.expense || 'Expense')}</div>
+          <div><strong>${t.type || 'Type'}:</strong> <span class="${entry.type === 'income' ? 'val-payment' : 'val-purchase'}" style="font-weight: 800; color: ${entry.type === 'income' ? '#15803d' : '#b91c1c'} !important;">${entry.type === 'income' ? (t.income || 'Payment Receipt') : (t.expense || 'Purchase Voucher')}</span></div>
           <div><strong>${t.currency || 'Currency'}:</strong> ${entry.currency || 'AFN'}</div>
         </div>
       </div>
@@ -251,7 +274,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
           <tr>
             <td><span style="unicode-bidi:plaintext;">${entry.description || '-'}</span></td>
             <td><strong>${entry.currency || 'AFN'}</strong></td>
-            <td class="text-end ${entry.type === 'income' ? 'badge-income' : 'badge-expense'}" style="font-size:14px; font-weight:800;">
+            <td class="text-end ${entry.type === 'income' ? 'val-payment' : 'val-purchase'}" style="font-size:14px; font-weight:800; color: ${entry.type === 'income' ? '#15803d' : '#b91c1c'} !important;">
               ${entry.type === 'income' ? '+' : '-'}${entry.amount.toLocaleString()} ${entry.currency || 'AFN'}
             </td>
           </tr>
@@ -349,6 +372,9 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
           
           <button
             onClick={() => {
+              if (!isFormOpen) {
+                setFormDate(getTodayShamsi().gregStr);
+              }
               setIsFormOpen(!isFormOpen);
               setErrors({});
             }}
@@ -379,6 +405,7 @@ export default function Roznamcha({ data, customers, t, query, dateFilter, billF
                   <ShamsiDatePicker
                     value={formDate}
                     onChange={(gregStr) => setFormDate(gregStr)}
+                    lang={t.today === 'نن' ? 'ps' : t.today === 'امروز' ? 'dr' : 'en'}
                   />
                   <input type="hidden" name="date" value={formDate} />
                 </div>

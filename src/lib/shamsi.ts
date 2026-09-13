@@ -28,7 +28,15 @@ export function gregorianToShamsi(dateInput?: Date | string | number | null): Sh
   let d: Date;
   if (!dateInput) {
     d = new Date();
-  } else if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+  } else if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [y, m, day] = trimmed.split('-').map(Number);
+      d = new Date(y, m - 1, day, 12, 0, 0);
+    } else {
+      d = new Date(trimmed);
+    }
+  } else if (typeof dateInput === 'number') {
     d = new Date(dateInput);
   } else {
     d = dateInput;

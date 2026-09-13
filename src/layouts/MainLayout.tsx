@@ -130,7 +130,10 @@ export default function MainLayout({
           {menuItems.map((item) => (
             <motion.button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setSearchQuery('');
+                setActiveTab(item.id);
+              }}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
@@ -188,8 +191,18 @@ export default function MainLayout({
                 placeholder={t.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(convertPersianDigits(e.target.value))}
-                className="w-full bg-muted border border-border rounded-xl py-2 ps-10 pe-4 focus:outline-none focus:border-brand-500 transition-colors text-sm"
+                className="w-full bg-muted border border-border rounded-xl py-2 ps-10 pe-9 focus:outline-none focus:border-brand-500 transition-colors text-sm"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-e-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
           </div>
           

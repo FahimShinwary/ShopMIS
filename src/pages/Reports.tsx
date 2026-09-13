@@ -17,7 +17,8 @@ import {
   PieChart,
   ArrowUpRight,
   ArrowDownRight,
-  User
+  User,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -33,7 +34,7 @@ import {
   isDateInRange
 } from '../lib/shamsi';
 import { RoznamchaEntry, KataTransaction, KataSummary, StockEntry, Customer, Currency } from '../types';
-import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml, generateMultiCurrencySummaryHtml } from '../lib/pdfUtils';
 
 interface ReportsProps {
   roznamchaData: RoznamchaEntry[];
@@ -73,6 +74,11 @@ export default function Reports({
   React.useEffect(() => {
     setCurrentPage(1);
   }, [startDate, endDate, activeReportTab, currencyFilter, searchQuery, selectedCustomerReportId]);
+
+  // Clear search query whenever user switches report tabs
+  React.useEffect(() => {
+    setSearchQuery('');
+  }, [activeReportTab]);
 
   const selectedCustomerObj = useMemo(() => {
     if (selectedCustomerReportId === 'all') return null;
@@ -391,22 +397,164 @@ export default function Reports({
     const dateRangeLabel = `${startDate ? formatShamsi(startDate, 'full') : (t.all_time || 'All Time')} ${t.to || 'to'} ${endDate ? formatShamsi(endDate, 'full') : formatShamsi(todayStr, 'full')}`;
     const reportTitle = `${t.reports || 'Report'} - ${shopName}`;
 
-    const summaryGridHtml = `
-      <div style="margin-bottom:6px; display:flex; flex-wrap:wrap; gap:6px;">
-        ${['AFN', 'USD', 'EUR', 'PKR'].map(curr => {
-          const tot = totalsByCurrency[curr];
-          if (!tot || (tot.income === 0 && tot.expense === 0)) return '';
-          return `
-            <div class="summary-card" style="border:1px solid #cbd5e1; border-radius:5px; padding:3px 8px; display:inline-flex; align-items:center; gap:8px; background:#f8fafc;">
-              <span style="font-size:8.5px; font-weight:700; color:#334155;">${curr} ${t.summary || 'Summary'}:</span>
-              <span style="font-size:8.5px; font-weight:700;" class="badge-income">+${tot.income.toLocaleString()}</span>
-              <span style="font-size:8.5px; font-weight:700;" class="badge-expense">-${tot.expense.toLocaleString()}</span>
-              <span style="font-size:8.5px; font-weight:800; color:#0f172a;">Net: ${tot.netCashflow >= 0 ? '+' : ''}${tot.netCashflow.toLocaleString()} ${curr}</span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
+    const buildRoznamchaSummaryHtml = () => {
+      const currenciesPresent = Array.from(new Set<string>(filteredRoznamcha.map(e => (e.currency as string) || 'AFN'))).filter(Boolean);
+      const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+      const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+      activeCurrencies.sort((a, b) => {
+        const idxA = preferredOrder.indexOf(a);
+        const idxB = preferredOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      const summaryItems = activeCurrencies.map(curr => {
+        const entries = filteredRoznamcha.filter(e => (e.currency || 'AFN') === curr);
+        const income = entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+        const expense = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+        const netCashflow = income - expense;
+        return {
+          currency: curr,
+          primaryLabel: t.income || 'Total Received',
+          primaryAmount: income,
+          primaryColor: '#15803d',
+          primaryPrefix: '+',
+          secondaryLabel: t.expense || 'Total Paid',
+          secondaryAmount: expense,
+          secondaryColor: '#b91c1c',
+          secondaryPrefix: '-',
+          balanceLabel: t.net_cashflow || 'Net Cashflow',
+          balanceAmount: netCashflow,
+          balanceColor: netCashflow >= 0 ? '#15803d' : '#b91c1c',
+          count: entries.length
+        };
+      });
+
+      return generateMultiCurrencySummaryHtml({
+        currencies: summaryItems,
+        totalRecords: filteredRoznamcha.length,
+        totalRecordsLabel: t.total_records || 'Total Records',
+        sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+        isRTL
+      });
+    };
+
+    const buildKataSummaryHtml = () => {
+      const currenciesPresent = Array.from(new Set<string>(filteredKata.map(e => (e.currency as string) || 'AFN'))).filter(Boolean);
+      const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+      const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+      activeCurrencies.sort((a, b) => {
+        const idxA = preferredOrder.indexOf(a);
+        const idxB = preferredOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      const summaryItems = activeCurrencies.map(curr => {
+        const entries = filteredKata.filter(e => (e.currency || 'AFN') === curr);
+        const purchases = entries
+          .filter(e => (e.type as string) === 'debit' || (e.type as string) === 'purchase')
+          .reduce((sum, e) => sum + e.amount, 0);
+        const paid = entries
+          .filter(e => (e.type as string) === 'credit' || (e.type as string) === 'payment')
+          .reduce((sum, e) => sum + e.amount, 0);
+        const balance = purchases - paid;
+        return {
+          currency: curr,
+          primaryLabel: t.total_purchase || 'Total Purchases',
+          primaryAmount: purchases,
+          primaryColor: '#b91c1c',
+          primaryPrefix: '+',
+          secondaryLabel: t.total_paid || 'Total Paid',
+          secondaryAmount: paid,
+          secondaryColor: '#15803d',
+          secondaryPrefix: '-',
+          balanceLabel: t.remaining_balance || 'Net Balance',
+          balanceAmount: balance,
+          balanceColor: balance > 0 ? '#b91c1c' : '#15803d',
+          count: entries.length
+        };
+      });
+
+      return generateMultiCurrencySummaryHtml({
+        currencies: summaryItems,
+        totalRecords: filteredKata.length,
+        totalRecordsLabel: t.total_records || 'Total Transactions',
+        sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+        isRTL
+      });
+    };
+
+    const buildCustomersSummaryHtml = () => {
+      const currenciesPresent = Array.from(new Set<string>(filteredCustomerSummaries.map(s => (s.currency as string) || 'AFN'))).filter(Boolean);
+      const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+      const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+      activeCurrencies.sort((a, b) => {
+        const idxA = preferredOrder.indexOf(a);
+        const idxB = preferredOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      const summaryItems = activeCurrencies.map(curr => {
+        const items = filteredCustomerSummaries.filter(s => (s.currency || 'AFN') === curr);
+        const totalPurchases = items.reduce((acc, s) => acc + (s.total_purchase || 0), 0);
+        const totalPaid = items.reduce((acc, s) => acc + (s.total_paid || 0), 0);
+        const totalRemaining = items.reduce((acc, s) => acc + (s.remaining_balance || 0), 0);
+        return {
+          currency: curr,
+          primaryLabel: t.total_purchase || 'Total Purchases',
+          primaryAmount: totalPurchases,
+          primaryColor: '#b91c1c',
+          primaryPrefix: '+',
+          secondaryLabel: t.total_paid || 'Total Paid',
+          secondaryAmount: totalPaid,
+          secondaryColor: '#15803d',
+          secondaryPrefix: '-',
+          balanceLabel: t.remaining_balance || 'Remaining Balance',
+          balanceAmount: totalRemaining,
+          balanceColor: totalRemaining > 0 ? '#b91c1c' : '#15803d',
+          count: items.length
+        };
+      });
+
+      return generateMultiCurrencySummaryHtml({
+        currencies: summaryItems,
+        totalRecords: filteredCustomerSummaries.length,
+        totalRecordsLabel: t.customers || 'Total Customers',
+        sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+        isRTL
+      });
+    };
+
+    const buildStockSummaryHtml = () => {
+      return `
+        <div class="summary-grid">
+          <div class="summary-card">
+            <h3>${t.stock_in || 'Stock In'}</h3>
+            <p style="color: #15803d;">${totals.totalStockInQty.toLocaleString()}</p>
+          </div>
+          <div class="summary-card">
+            <h3>${t.stock_out || 'Stock Out'}</h3>
+            <p style="color: #b91c1c;">${totals.totalStockOutQty.toLocaleString()}</p>
+          </div>
+          <div class="summary-card">
+            <h3>${t.available_stock || 'Available Stock'}</h3>
+            <p style="color: #0f172a;">${(totals.totalStockInQty - totals.totalStockOutQty).toLocaleString()}</p>
+          </div>
+          <div class="summary-card">
+            <h3>${t.total_records || 'Total Records'}</h3>
+            <p style="color: #0f172a;">${filteredStock.length}</p>
+          </div>
+        </div>
+      `;
+    };
 
     let contentHtml = '';
 
@@ -416,33 +564,34 @@ export default function Reports({
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
-        summaryHtml: summaryGridHtml,
+        summaryHtml: buildRoznamchaSummaryHtml(),
         records: filteredRoznamcha,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
           { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-          { header: t.customer_name || 'Customer Name', style: 'width: 19%;' },
-          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
-          { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
+          { header: t.customer_name || 'Customer Name', style: 'width: 21%;' },
+          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
           { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
-          { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
-          { header: t.description || 'Description', style: 'width: 24%;' }
+          { header: t.bill_number || 'Bill #', style: 'width: 12%; text-align: center;' },
+          { header: t.description || 'Description', style: 'width: 20%;' }
         ],
         renderRow: (e: RoznamchaEntry, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
+          const isIncome = e.type === 'income';
           const curr = e.currency || 'AFN';
           return `
             <tr>
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
                 <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
               <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
-              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td class="${isIncome ? 'val-payment' : 'val-purchase'}" style="text-align: center; color: ${isIncome ? '#15803d' : '#b91c1c'} !important; font-weight: 800;">${isIncome ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
+              <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
+              <td class="${isIncome ? 'val-payment' : 'val-purchase'}" style="text-align: end; font-weight: 800; color: ${isIncome ? '#15803d' : '#b91c1c'} !important;">${isIncome ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
               <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
               <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
@@ -455,18 +604,18 @@ export default function Reports({
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
-        summaryHtml: summaryGridHtml,
+        summaryHtml: buildKataSummaryHtml(),
         records: filteredKata,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
           { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-          { header: t.customer_name || 'Customer Name', style: 'width: 19%;' },
-          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
-          { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
+          { header: t.customer_name || 'Customer Name', style: 'width: 21%;' },
+          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
           { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
-          { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
-          { header: t.description || 'Description', style: 'width: 24%;' }
+          { header: t.bill_number || 'Bill #', style: 'width: 12%; text-align: center;' },
+          { header: t.description || 'Description', style: 'width: 20%;' }
         ],
         renderRow: (e: KataTransaction, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
@@ -477,12 +626,12 @@ export default function Reports({
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
                 <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
               <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
-              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${e.amount.toLocaleString()} ${curr}</td>
+              <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: center; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important; font-weight: 800;">${isPurchase ? (t.purchase || 'Credit Purchase') : (t.payment || 'Debt Payment')}</td>
+              <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
+              <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">${isPurchase ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
               <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
               <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
@@ -495,15 +644,16 @@ export default function Reports({
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: buildStockSummaryHtml(),
         records: filteredStock,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
           { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
           { header: t.item_name || 'Item Name', style: 'width: 22%;' },
-          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
           { header: t.quantity || 'Quantity', style: 'width: 11%; text-align: end;' },
-          { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
+          { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
           { header: t.description || 'Description', style: 'width: 28%;' }
         ],
         renderRow: (e: StockEntry, _idx: number, gIdx: number) => `
@@ -511,10 +661,10 @@ export default function Reports({
             <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
             <td style="text-align: center;">
               <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-              <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+              <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
             </td>
             <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${e.item_name}</strong></td>
-            <td class="${e.type === 'in' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
+            <td style="text-align: center; color: ${e.type === 'in' ? '#15803d' : '#b91c1c'}; font-weight: 800;">${e.type === 'in' ? (t.stock_in || 'Stock In') : (t.stock_out || 'Stock Out')}</td>
             <td style="text-align: end; font-weight: 800; color: #000000;">${e.quantity.toLocaleString()}</td>
             <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
             <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
@@ -527,14 +677,15 @@ export default function Reports({
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
+        summaryHtml: buildCustomersSummaryHtml(),
         records: filteredCustomerSummaries,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 6%; text-align: center;' },
-          { header: t.customer_name || 'Name', style: 'width: 26%;' },
-          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
-          { header: t.total_purchase || 'Total Purchases', style: 'width: 20%; text-align: end;' },
-          { header: t.total_paid || 'Total Paid', style: 'width: 20%; text-align: end;' },
+          { header: t.customer_name || 'Customer Name', style: 'width: 27%;' },
+          { header: t.currency || 'Currency', style: 'width: 9%; text-align: center;' },
+          { header: t.total_purchase || 'Total Purchases', style: 'width: 19%; text-align: end;' },
+          { header: t.total_paid || 'Total Paid', style: 'width: 19%; text-align: end;' },
           { header: t.remaining_balance || t.remaining || 'Remaining Balance', style: 'width: 20%; text-align: end;' }
         ],
         renderRow: (s: KataSummary, _idx, gIdx) => {
@@ -544,35 +695,65 @@ export default function Reports({
             <tr>
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${custName}</strong></td>
-              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${s.currency || 'AFN'}</strong></td>
-              <td style="text-align: end; font-weight: 700; color: #000000;">${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
-              <td class="badge-income" style="text-align: end; font-weight: 800;">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
-              <td class="${s.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td style="text-align: center; font-weight: 800; color: #000000;">${s.currency || 'AFN'}</td>
+              <td class="val-purchase" style="text-align: end; font-weight: 800; color: #b91c1c !important;">${s.total_purchase.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="val-payment" style="text-align: end; font-weight: 800; color: #15803d !important;">${s.total_paid.toLocaleString()} ${s.currency || 'AFN'}</td>
+              <td class="${s.remaining_balance > 0 ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${s.remaining_balance > 0 ? '#b91c1c' : '#15803d'} !important;">${s.remaining_balance.toLocaleString()} ${s.currency || 'AFN'}</td>
             </tr>
           `;
         }
       });
     } else if (activeReportTab === 'single_customer' && selectedCustomerObj) {
-      const customerHeaderSummary = `
-        <div style="margin-bottom:10px; padding:8px 12px; border:1.5px solid #1e40af; border-radius:6px; background-color:#eff6ff;">
-          <h2 style="margin:0; font-size:14px; font-weight:800; color:#000000;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
-          <p style="margin:3px 0 0 0; font-size:10.5px; font-weight:700; color:#000000;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
-        </div>
+      const currenciesPresent = Array.from(new Set<string>(singleCustomerTransactions.map(e => (e.currency as string) || 'AFN'))).filter(Boolean);
+      const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+      const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+      activeCurrencies.sort((a, b) => {
+        const idxA = preferredOrder.indexOf(a);
+        const idxB = preferredOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
 
-        <div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px;">
-          ${['AFN', 'USD', 'EUR', 'PKR'].map(curr => {
-            const s = singleCustomerCurrencySummary[curr];
-            if (!s || (s.totalPurchase === 0 && s.totalPaid === 0)) return '';
-            return `
-              <div class="summary-card" style="border:1.5px solid #334155; border-radius:5px; padding:3px 8px; display:inline-flex; align-items:center; gap:8px; background:#f8fafc;">
-                <span style="font-size:8.5px; font-weight:800; color:#000000;">${curr}:</span>
-                <span style="font-size:8.5px; font-weight:800;" class="badge-expense">${t.total_purchase || 'Purchases'}: ${s.totalPurchase.toLocaleString()}</span>
-                <span style="font-size:8.5px; font-weight:800;" class="badge-income">${t.total_paid || 'Paid'}: ${s.totalPaid.toLocaleString()}</span>
-                <span style="font-size:8.5px; font-weight:900; color:${s.remainingBalance > 0 ? '#b91c1c' : '#15803d'};">Net: ${s.remainingBalance.toLocaleString()} ${curr}</span>
-              </div>
-            `;
-          }).join('')}
+      const summaryItems = activeCurrencies.map(curr => {
+        const txs = singleCustomerTransactions.filter(e => (e.currency || 'AFN') === curr);
+        const purchases = txs
+          .filter(e => (e.type as string) === 'purchase' || (e.type as string) === 'debit')
+          .reduce((sum, e) => sum + e.amount, 0);
+        const paid = txs
+          .filter(e => (e.type as string) === 'payment' || (e.type as string) === 'credit')
+          .reduce((sum, e) => sum + e.amount, 0);
+        const balance = purchases - paid;
+        return {
+          currency: curr,
+          primaryLabel: t.total_purchase || 'Total Purchases',
+          primaryAmount: purchases,
+          primaryColor: '#b91c1c',
+          primaryPrefix: '+',
+          secondaryLabel: t.total_paid || 'Total Paid',
+          secondaryAmount: paid,
+          secondaryColor: '#15803d',
+          secondaryPrefix: '-',
+          balanceLabel: t.remaining_balance || 'Remaining Balance',
+          balanceAmount: balance,
+          balanceColor: balance > 0 ? '#b91c1c' : '#15803d',
+          count: txs.length
+        };
+      });
+
+      const customerHeaderSummary = `
+        <div style="margin-bottom:6px; padding:6px 12px; border:1.5px solid #334155; border-radius:6px; background-color:#f8fafc;">
+          <h2 style="margin:0; font-size:13px; font-weight:800; color:#000000;"><span style="unicode-bidi:plaintext;">${t.customer || 'Customer'}: ${selectedCustomerObj.name}</span></h2>
+          <p style="margin:2px 0 0 0; font-size:10px; font-weight:700; color:#475569;"><span style="unicode-bidi:plaintext;">${t.contact || 'Contact'}: ${selectedCustomerObj.contact || '-'} | ${t.address || 'Address'}: ${selectedCustomerObj.address || '-'}</span></p>
         </div>
+        ${generateMultiCurrencySummaryHtml({
+          currencies: summaryItems,
+          totalRecords: singleCustomerTransactions.length,
+          totalRecordsLabel: t.total_records || 'Transactions',
+          sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+          isRTL
+        })}
       `;
 
       contentHtml = createPaginatedReportHtml<KataTransaction>({
@@ -582,15 +763,16 @@ export default function Reports({
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: customerHeaderSummary,
         records: singleCustomerTransactions,
+        firstPageRecords: activeCurrencies.length > 2 ? 8 : 10,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
           { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
-          { header: t.currency || 'Currency', style: 'width: 7%; text-align: center;' },
+          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
           { header: t.amount || 'Amount', style: 'width: 14%; text-align: end;' },
           { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
-          { header: t.description || 'Description', style: 'width: 40%;' }
+          { header: t.description || 'Description', style: 'width: 38%;' }
         ],
         renderRow: (e: KataTransaction, _idx: number, gIdx: number) => {
           const isPurchase = (e.type as string) === 'purchase' || (e.type as string) === 'debit';
@@ -600,11 +782,11 @@ export default function Reports({
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
                 <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
-              <td class="${isPurchase ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">${e.amount.toLocaleString()} ${curr}</td>
+              <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: center; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important; font-weight: 800;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
+              <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
+              <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">${isPurchase ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
               <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
               <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
@@ -618,33 +800,34 @@ export default function Reports({
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
-        summaryHtml: summaryGridHtml,
+        summaryHtml: buildRoznamchaSummaryHtml(),
         records: filteredRoznamcha,
         isRTL,
         columns: [
           { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
           { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-          { header: t.customer_name || 'Customer Name', style: 'width: 19%;' },
-          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
-          { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
+          { header: t.customer_name || 'Customer Name', style: 'width: 21%;' },
+          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
           { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
-          { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
-          { header: t.description || 'Description', style: 'width: 24%;' }
+          { header: t.bill_number || 'Bill #', style: 'width: 12%; text-align: center;' },
+          { header: t.description || 'Description', style: 'width: 20%;' }
         ],
         renderRow: (e: RoznamchaEntry, _idx: number, gIdx: number) => {
           const cName = customers.find(c => c.id === e.customer_id)?.name || '-';
+          const isIncome = e.type === 'income';
           const curr = e.currency || 'AFN';
           return `
             <tr>
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
               <td style="text-align: center;">
                 <div style="font-weight: 800; color: #000000;">${formatShamsi(e.date, 'YYYY/MM/DD')}</div>
-                <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
+                <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(e.date), 'yyyy-MM-dd')}</div>
               </td>
               <td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${cName}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: center;">${e.type === 'income' ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
-              <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${curr}</strong></td>
-              <td class="${e.type === 'income' ? 'badge-income' : 'badge-expense'}" style="text-align: end; font-weight: 800;">${e.type === 'income' ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
+              <td class="${isIncome ? 'val-payment' : 'val-purchase'}" style="text-align: center; color: ${isIncome ? '#15803d' : '#b91c1c'} !important; font-weight: 800;">${isIncome ? (t.income || 'Payment') : (t.expense || 'Purchase')}</td>
+              <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
+              <td class="${isIncome ? 'val-payment' : 'val-purchase'}" style="text-align: end; font-weight: 800; color: ${isIncome ? '#15803d' : '#b91c1c'} !important;">${isIncome ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
               <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
               <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
@@ -818,8 +1001,18 @@ export default function Reports({
                 placeholder={t.search || 'Search description, bill #, customer...'}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl ps-9 pe-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-foreground font-medium"
+                className="w-full bg-background border border-border rounded-xl ps-9 pe-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-foreground font-medium"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 my-auto end-3 text-muted-foreground hover:text-foreground p-0.5 rounded-full transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1117,7 +1310,7 @@ export default function Reports({
                             "p-3 font-bold",
                             entry.type === 'income' ? "text-green-500" : "text-red-500"
                           )}>
-                            {entry.type === 'income' ? '+' : '-'}{entry.amount.toLocaleString()}
+                            {entry.type === 'income' ? '+' : '-'}{entry.amount.toLocaleString()} <span className="text-xs opacity-75">{entry.currency || 'AFN'}</span>
                           </td>
                           <td className="p-3 font-mono text-muted-foreground">{entry.bill_number || '-'}</td>
                           <td className="p-3 text-foreground/80">{entry.description}</td>
@@ -1200,7 +1393,7 @@ export default function Reports({
                             "p-3 font-bold",
                             isPurchase ? "text-red-500" : "text-green-500"
                           )}>
-                            {entry.amount.toLocaleString()}
+                            {isPurchase ? '+' : '-'}{entry.amount.toLocaleString()} <span className="text-xs opacity-75">{entry.currency || 'AFN'}</span>
                           </td>
                           <td className="p-3 font-mono text-muted-foreground">{entry.bill_number || '-'}</td>
                           <td className="p-3 text-foreground/80">{entry.description}</td>
@@ -1346,8 +1539,8 @@ export default function Reports({
                               {curr}
                             </span>
                           </td>
-                          <td className="p-3 font-semibold">{s.total_purchase.toLocaleString()} {curr}</td>
-                          <td className="p-3 font-semibold text-green-500">{s.total_paid.toLocaleString()} {curr}</td>
+                          <td className="p-3 font-bold text-red-500">{s.total_purchase.toLocaleString()} {curr}</td>
+                          <td className="p-3 font-bold text-green-500">{s.total_paid.toLocaleString()} {curr}</td>
                           <td className={cn(
                             "p-3 font-bold",
                             s.remaining_balance > 0 ? "text-red-500" : "text-green-500"

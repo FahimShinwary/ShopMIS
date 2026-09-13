@@ -8,7 +8,8 @@ import {
   parseShamsiStr, 
   AFGHAN_MONTHS, 
   getShamsiMonthDays,
-  ShamsiDate
+  ShamsiDate,
+  getTodayShamsi
 } from '../lib/shamsi';
 
 interface ShamsiDatePickerProps {
@@ -41,7 +42,7 @@ export const ShamsiDatePicker: React.FC<ShamsiDatePickerProps> = ({
 
   // Helper to parse initial value to date object and shamsi object
   const getShamsiFromValue = (val?: string): ShamsiDate => {
-    if (!val) return gregorianToShamsi(new Date());
+    if (!val || val.trim() === '') return getTodayShamsi();
 
     if (val.startsWith('13') || val.startsWith('14')) {
       const parsed = parseShamsiStr(val);
@@ -174,6 +175,10 @@ export const ShamsiDatePicker: React.FC<ShamsiDatePickerProps> = ({
 
   const codeShamsiString = formatShamsi(selectedShamsi, 'YYYY/MM/DD');
   const gregString = shamsiToGregorianStr(selectedShamsi.jy, selectedShamsi.jm, selectedShamsi.jd);
+  
+  const todayInfo = getTodayShamsi();
+  const isSelectedToday = gregString === todayInfo.gregStr;
+  const todayBadgeText = lang === 'ps' ? 'نن (Today)' : lang === 'dr' ? 'امروز (Today)' : 'Today';
 
   const shamsiYearOptions = Array.from({ length: 46 }, (_, i) => 1390 + i);
   const gregYearOptions = Array.from({ length: 41 }, (_, i) => 2010 + i);
@@ -193,6 +198,11 @@ export const ShamsiDatePicker: React.FC<ShamsiDatePickerProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap truncate text-xs font-bold">
             <span className="text-foreground">☀️ {codeShamsiString}</span>
             <span className="text-muted-foreground font-mono">| 📅 {gregString}</span>
+            {isSelectedToday && (
+              <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+                ✓ {todayBadgeText}
+              </span>
+            )}
           </div>
         </div>
         <span className="text-[10px] bg-brand-500/10 text-brand-500 font-extrabold px-2 py-0.5 rounded-lg border border-brand-500/20 shrink-0 ms-1">

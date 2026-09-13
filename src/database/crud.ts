@@ -338,7 +338,7 @@ export const customers = {
 export const stock = {
   getAll: () => {
     return safeQuery((db) => {
-      return db.prepare('SELECT * FROM stock ORDER BY date DESC').all();
+      return db.prepare('SELECT id, TRIM(item_name) as item_name, date, type, quantity, description, bill_number FROM stock ORDER BY date DESC').all();
     });
   },
   create: (entry: Omit<StockEntry, 'id'>, username: string = 'admin') => {
@@ -371,9 +371,13 @@ export const stock = {
   update: (id: number, entry: Omit<StockEntry, 'id'>, username: string = 'admin') => {
     return safeQuery((db) => {
       const { item_name, date, type, quantity, description, bill_number } = entry;
+      const cleanItem = (item_name || '').trim();
+      const cleanBill = (bill_number || '').trim();
+      const cleanDesc = (description || '').trim();
+      const numQty = Number(quantity) || 0;
       const info = db.prepare('UPDATE stock SET item_name = ?, date = ?, type = ?, quantity = ?, description = ?, bill_number = ? WHERE id = ?')
-        .run(item_name, date, type, quantity, description, bill_number, id);
-      logs.add('Stock', `Updated stock item #${id} ("${item_name}", qty: ${quantity})`, 'info', username, 'UPDATE');
+        .run(cleanItem, date, type, numQty, cleanDesc, cleanBill, id);
+      logs.add('Stock', `Updated stock item #${id} ("${cleanItem}", qty: ${numQty})`, 'info', username, 'UPDATE');
       return info;
     });
   },

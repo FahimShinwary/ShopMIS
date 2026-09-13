@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Terminal, 
   Database, 
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, convertPersianDigits } from '../lib/utils';
+import Pagination from '../components/Pagination';
 
 interface DeveloperDashboardProps {
   t: any;
@@ -51,10 +52,88 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
   const [isRestoring, setIsRestoring] = useState(false);
   const [pendingRestoreFile, setPendingRestoreFile] = useState<File | null>(null);
   
-  // Audit Logs Filter State
+  // Quick Tools Modals
+  const [isAddTableModalOpen, setIsAddTableModalOpen] = useState(false);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableColName, setNewTableColName] = useState('name');
+  const [newTableColType, setNewTableColType] = useState('TEXT');
+
+  const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
+  const [targetTable, setTargetTable] = useState('roznamcha');
+  const [newColName, setNewColName] = useState('');
+  const [newColType, setNewColType] = useState('TEXT');
+
+  const [isResetAdminModalOpen, setIsResetAdminModalOpen] = useState(false);
+  const [isWipeDataModalOpen, setIsWipeDataModalOpen] = useState(false);
+  
+  // Audit Logs Filter & Pagination State
   const [logSearch, setLogSearch] = useState('');
   const [selectedModule, setSelectedModule] = useState('ALL');
   const [selectedAction, setSelectedAction] = useState('ALL');
+  const [logPage, setLogPage] = useState(1);
+  const logsPerPage = 15;
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const matchMod = selectedModule === 'ALL' || (log.module || '').toUpperCase() === selectedModule.toUpperCase();
+      const matchAct = selectedAction === 'ALL' || (log.action || '').toUpperCase() === selectedAction.toUpperCase();
+      const q = logSearch.toLowerCase().trim();
+      const matchQuery = !q || 
+        (log.username || '').toLowerCase().includes(q) ||
+        (log.message || '').toLowerCase().includes(q) ||
+        (log.module || '').toLowerCase().includes(q) ||
+        (log.action || '').toLowerCase().includes(q) ||
+        (log.date || '').toLowerCase().includes(q);
+
+      return matchMod && matchAct && matchQuery;
+    });
+  }, [logs, selectedModule, selectedAction, logSearch]);
+
+  const totalLogPages = Math.ceil(filteredLogs.length / logsPerPage) || 1;
+  const paginatedLogs = useMemo(() => {
+    const start = (logPage - 1) * logsPerPage;
+    return filteredLogs.slice(start, start + logsPerPage);
+  }, [filteredLogs, logPage, logsPerPage]);
+
+  useEffect(() => {
+    setLogPage(1);
+  }, [logSearch, selectedModule, selectedAction]);
+
+  useEffect(() => {
+    if (logPage > totalLogPages) {
+      setLogPage(Math.max(1, totalLogPages));
+    }
+  }, [totalLogPages, logPage]);
+
+  // User Management Filter & Pagination State
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const usersPerPage = 8;
+
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase().trim();
+    if (!q) return users;
+    return users.filter(u => 
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.role || '').toLowerCase().includes(q)
+    );
+  }, [users, userSearch]);
+
+  const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
+  const paginatedUsers = useMemo(() => {
+    const start = (userPage - 1) * usersPerPage;
+    return filteredUsers.slice(start, start + usersPerPage);
+  }, [filteredUsers, userPage, usersPerPage]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [userSearch]);
+
+  useEffect(() => {
+    if (userPage > totalUserPages) {
+      setUserPage(Math.max(1, totalUserPages));
+    }
+  }, [totalUserPages, userPage]);
 
   useEffect(() => {
     fetchLogs();
@@ -263,7 +342,176 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
     }
   };
 
+  const handleAddTableSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanTable = newTableName.trim().replace(/[^a-zA-Z0-9_]/g, '');
+    const cleanCol = newTableColName.trim().replace(/[^a-zA-Z0-9_]/g, '') || 'name';
+    if (!cleanTable) {
+      onNotify?.('Please provide a valid table name', 'error');
+      return;
+    }
+
+    const sql = `CREATE TABLE IF NOT EXISTS ${cleanTable} (id INTEGER PRIMARY KEY AUTOINCREMENT, ${cleanCol} ${newTableColType});`;
+    setQuery(sql);
+    setIsExecuting(true);
+    setQueryError(null);
+    setQueryResult(null);
+
+    try {
+      if (window.electronAPI) {
+        const res = await window.electronAPI.executeRaw(sql);
+        setQueryResult(res || { success: true, message: `Table "${cleanTable}" created successfully.` });
+      } else {
+        const res = await fetch('/api/developer/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: sql, devPassword: 'NewCode@ShopMIS' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setQueryResult(data);
+        } else {
+          setQueryError(data.error || 'Failed to create table');
+        }
+      }
+      onNotify?.(`Table "${cleanTable}" created successfully!`, 'success');
+      setIsAddTableModalOpen(false);
+      setNewTableName('');
+      setNewTableColName('name');
+      fetchSystemStatus();
+    } catch (err: any) {
+      setQueryError(err.message);
+      onNotify?.(`Error creating table: ${err.message}`, 'error');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleAddColumnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanTable = targetTable.trim().replace(/[^a-zA-Z0-9_]/g, '');
+    const cleanCol = newColName.trim().replace(/[^a-zA-Z0-9_]/g, '');
+    if (!cleanTable || !cleanCol) {
+      onNotify?.('Please provide both table and column name', 'error');
+      return;
+    }
+
+    const sql = `ALTER TABLE ${cleanTable} ADD COLUMN ${cleanCol} ${newColType};`;
+    setQuery(sql);
+    setIsExecuting(true);
+    setQueryError(null);
+    setQueryResult(null);
+
+    try {
+      if (window.electronAPI) {
+        const res = await window.electronAPI.executeRaw(sql);
+        setQueryResult(res || { success: true, message: `Column "${cleanCol}" added to table "${cleanTable}".` });
+      } else {
+        const res = await fetch('/api/developer/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: sql, devPassword: 'NewCode@ShopMIS' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setQueryResult(data);
+        } else {
+          setQueryError(data.error || 'Failed to add column');
+        }
+      }
+      onNotify?.(`Column "${cleanCol}" added to "${cleanTable}" successfully!`, 'success');
+      setIsAddColumnModalOpen(false);
+      setNewColName('');
+    } catch (err: any) {
+      setQueryError(err.message);
+      onNotify?.(`Error adding column: ${err.message}`, 'error');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleConfirmResetAdmin = async () => {
+    setIsExecuting(true);
+    const sql = `UPDATE users SET password = 'NewCode@ShopMIS' WHERE role = 'admin' OR id = 1 OR username = 'admin';`;
+    setQuery(sql);
+    setQueryError(null);
+    setQueryResult(null);
+
+    try {
+      if (window.electronAPI) {
+        await window.electronAPI.executeRaw(sql);
+      } else {
+        const res = await fetch('/api/developer/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: sql, devPassword: 'NewCode@ShopMIS' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Reset query failed');
+      }
+
+      setQueryResult({
+        success: true,
+        message: 'Admin credentials successfully reset.\nUsername: admin\nPassword: NewCode@ShopMIS'
+      });
+      onNotify?.('Admin password reset to: NewCode@ShopMIS', 'success');
+      setIsResetAdminModalOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      setQueryError(err.message);
+      onNotify?.(`Reset admin failed: ${err.message}`, 'error');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  const handleConfirmWipeData = async () => {
+    setIsExecuting(true);
+    const sql = `DELETE FROM roznamcha; DELETE FROM kata_transactions; DELETE FROM kata_summary; DELETE FROM stock; DELETE FROM customers; DELETE FROM system_logs;`;
+    setQuery(sql);
+    setQueryError(null);
+    setQueryResult(null);
+
+    try {
+      if (window.electronAPI) {
+        await window.electronAPI.executeRaw(sql);
+      } else {
+        const res = await fetch('/api/developer/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: sql, devPassword: 'NewCode@ShopMIS' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Wipe query failed');
+      }
+
+      setQueryResult({
+        success: true,
+        message: 'All business data wiped successfully (Roznamcha, Kata, Stock, Customers, Logs).'
+      });
+      onNotify?.('All business records wiped successfully!', 'success');
+      setIsWipeDataModalOpen(false);
+      fetchSystemStatus();
+      fetchLogs();
+      fetchUsers();
+    } catch (err: any) {
+      setQueryError(err.message);
+      onNotify?.(`Wipe failed: ${err.message}`, 'error');
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   const handleQuickTool = async (tool: string) => {
+    if (tool === 'reset_admin') {
+      setIsResetAdminModalOpen(true);
+      return;
+    }
+    if (tool === 'wipe_data') {
+      setIsWipeDataModalOpen(true);
+      return;
+    }
+
     setIsExecuting(true);
     try {
       let q = '';
@@ -271,13 +519,7 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
         q = 'UPDATE kata_summary SET total_purchase = (SELECT COALESCE(SUM(amount), 0) FROM kata_transactions WHERE kata_transactions.customer_id = kata_summary.customer_id AND (type = "purchase" OR type = "debit"))';
       } else if (tool === 'clean_duplicates') {
         q = 'DELETE FROM roznamcha WHERE id NOT IN (SELECT MIN(id) FROM roznamcha GROUP BY date, type, amount, description, bill_number, customer_id)';
-      } else if (tool === 'reset_admin') {
-        q = "UPDATE users SET password = 'NewCode@ShopMIS' WHERE role = 'admin' OR id = 1";
       } else if (tool === 'reset_license') {
-        if (!confirm('Lock app and show Activation License Window?')) {
-          setIsExecuting(false);
-          return;
-        }
         localStorage.removeItem('shop_mis_license');
         if (window.electronAPI) {
           await window.electronAPI.executeRaw("DELETE FROM settings WHERE key IN ('system_license', 'license_activation_date')");
@@ -289,12 +531,6 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
           window.location.reload();
         }, 500);
         return;
-      } else if (tool === 'wipe_data') {
-        if (!confirm('WIPE ALL DATA? This will permanently delete all transactions, logs, customers, and inventory. This cannot be undone!')) {
-          setIsExecuting(false);
-          return;
-        }
-        q = 'DELETE FROM roznamcha; DELETE FROM kata_transactions; DELETE FROM kata_summary; DELETE FROM stock; DELETE FROM customers; DELETE FROM system_logs;';
       }
       
       let success = false;
@@ -312,19 +548,12 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
       }
 
       if (success) {
-        if (tool === 'wipe_data') {
-          onNotify?.('All system data wiped successfully! Reloading system...', 'success');
-          alert('All business data wiped successfully! Click OK to reload.');
-          window.location.reload();
-        } else {
-          onNotify?.('Tool executed successfully!', 'success');
-          alert('Tool executed successfully');
-        }
+        onNotify?.('Tool executed successfully!', 'success');
       } else {
-        alert('Tool execution failed');
+        onNotify?.('Tool execution failed', 'error');
       }
     } catch (e: any) {
-      alert('Tool execution failed: ' + (e.message || 'Unknown error'));
+      onNotify?.('Tool execution failed: ' + (e.message || 'Unknown error'), 'error');
     } finally {
       setIsExecuting(false);
     }
@@ -523,26 +752,40 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <button
-                onClick={() => setQuery('CREATE TABLE IF NOT EXISTS new_table (id INTEGER PRIMARY KEY, name TEXT)')}
-                className="p-4 bg-muted/30 border border-border rounded-2xl text-center font-bold hover:bg-muted/50 transition-all"
+                type="button"
+                onClick={() => {
+                  setNewTableName('');
+                  setNewTableColName('name');
+                  setNewTableColType('TEXT');
+                  setIsAddTableModalOpen(true);
+                }}
+                className="p-4 bg-muted/30 border border-border rounded-2xl text-center font-bold hover:bg-muted/50 transition-all cursor-pointer"
               >
                 Add New Table
               </button>
               <button
-                onClick={() => setQuery('ALTER TABLE users ADD COLUMN new_col TEXT')}
-                className="p-4 bg-muted/30 border border-border rounded-2xl text-center font-bold hover:bg-muted/50 transition-all"
+                type="button"
+                onClick={() => {
+                  setNewColName('');
+                  setNewColType('TEXT');
+                  setTargetTable('roznamcha');
+                  setIsAddColumnModalOpen(true);
+                }}
+                className="p-4 bg-muted/30 border border-border rounded-2xl text-center font-bold hover:bg-muted/50 transition-all cursor-pointer"
               >
                 Add New Column
               </button>
               <button
-                onClick={() => handleQuickTool('reset_admin')}
-                className="p-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 rounded-2xl text-center font-bold hover:bg-orange-500/20 transition-all"
+                type="button"
+                onClick={() => setIsResetAdminModalOpen(true)}
+                className="p-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 rounded-2xl text-center font-bold hover:bg-orange-500/20 transition-all cursor-pointer"
               >
                 Reset Admin Access
               </button>
               <button
-                onClick={() => handleQuickTool('wipe_data')}
-                className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-center font-bold hover:bg-red-500/20 transition-all"
+                type="button"
+                onClick={() => setIsWipeDataModalOpen(true)}
+                className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl text-center font-bold hover:bg-red-500/20 transition-all cursor-pointer"
               >
                 Wipe All Data
               </button>
@@ -690,21 +933,7 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
 
             {/* Audit Logs Table List */}
             <div className="space-y-2.5">
-              {logs
-                .filter(log => {
-                  const matchMod = selectedModule === 'ALL' || (log.module || '').toUpperCase() === selectedModule.toUpperCase();
-                  const matchAct = selectedAction === 'ALL' || (log.action || '').toUpperCase() === selectedAction.toUpperCase();
-                  const q = logSearch.toLowerCase().trim();
-                  const matchQuery = !q || 
-                    (log.username || '').toLowerCase().includes(q) ||
-                    (log.message || '').toLowerCase().includes(q) ||
-                    (log.module || '').toLowerCase().includes(q) ||
-                    (log.action || '').toLowerCase().includes(q) ||
-                    (log.date || '').toLowerCase().includes(q);
-
-                  return matchMod && matchAct && matchQuery;
-                })
-                .map((log) => {
+              {paginatedLogs.map((log) => {
                   const actionUpper = (log.action || 'LOG').toUpperCase();
                   const typeUpper = (log.type || 'INFO').toUpperCase();
 
@@ -761,6 +990,14 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
                   );
                 })}
 
+              {filteredLogs.length === 0 && logs.length > 0 && (
+                <div className="text-center py-16 text-muted-foreground border border-dashed border-border rounded-3xl">
+                  <Search size={36} className="mx-auto mb-3 text-muted-foreground/50" />
+                  <p className="font-bold text-sm">No matching logs found.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try clearing or adjusting your search filters.</p>
+                </div>
+              )}
+
               {logs.length === 0 && !isLoading && (
                 <div className="text-center py-20 text-muted-foreground border border-dashed border-border rounded-3xl">
                   <ShieldCheck size={36} className="mx-auto mb-3 text-muted-foreground/50" />
@@ -769,24 +1006,51 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
                 </div>
               )}
             </div>
+
+            {/* Error Monitoring / Logs Pagination */}
+            <Pagination
+              currentPage={logPage}
+              totalPages={totalLogPages}
+              totalItems={filteredLogs.length}
+              itemsPerPage={logsPerPage}
+              onPageChange={(p) => setLogPage(p)}
+              t={t}
+            />
           </div>
         )}
 
         {activeSubTab === 'users' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold tracking-tight">System User Management</h3>
-              <button 
-                onClick={() => setIsUserModalOpen(true)}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"
-              >
-                <Plus size={18} />
-                Create User
-              </button>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold tracking-tight">System User Management</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manage administrator and staff accounts with system permissions.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-60">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full bg-muted/40 border border-border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                  />
+                </div>
+                <button 
+                  onClick={() => setIsUserModalOpen(true)}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shrink-0 transition-colors shadow-sm"
+                >
+                  <Plus size={18} />
+                  Create User
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {users.map((u) => (
-                <div key={u.id} className="p-6 bg-muted/30 border border-border rounded-3xl flex items-center justify-between group">
+              {paginatedUsers.map((u) => (
+                <div key={u.id} className="p-6 bg-muted/30 border border-border rounded-3xl flex items-center justify-between group hover:border-border/80 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-500">
                       <Users size={24} />
@@ -820,6 +1084,24 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
                 </div>
               ))}
             </div>
+
+            {filteredUsers.length === 0 && !isLoading && (
+              <div className="text-center py-16 text-muted-foreground border border-dashed border-border rounded-3xl">
+                <Users size={36} className="mx-auto mb-3 text-muted-foreground/50" />
+                <p className="font-bold text-sm">No users found.</p>
+                {userSearch && <p className="text-xs text-muted-foreground mt-1">Try clearing or adjusting your search query.</p>}
+              </div>
+            )}
+
+            {/* User Management Pagination */}
+            <Pagination
+              currentPage={userPage}
+              totalPages={totalUserPages}
+              totalItems={filteredUsers.length}
+              itemsPerPage={usersPerPage}
+              onPageChange={(p) => setUserPage(p)}
+              t={t}
+            />
           </div>
         )}
 
@@ -1057,6 +1339,295 @@ export default function DeveloperDashboard({ t, onNotify }: DeveloperDashboardPr
                   className="flex-1 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all font-bold"
                 >
                   Overwrite & Restore
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add New Table Modal */}
+      <AnimatePresence>
+        {isAddTableModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddTableModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-card border border-border rounded-3xl p-8 w-full max-w-md relative z-[101] shadow-2xl"
+            >
+              <h3 className="text-xl font-bold mb-1">Add New Table</h3>
+              <p className="text-muted-foreground text-sm mb-6">Create a new table in the database with primary key `id`.</p>
+              
+              <form onSubmit={handleAddTableSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Table Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. suppliers, notes, categories"
+                    value={newTableName}
+                    onChange={e => setNewTableName(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 font-mono text-sm" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Column Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. name, title"
+                      value={newTableColName}
+                      onChange={e => setNewTableColName(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 font-mono text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Column Type</label>
+                    <select 
+                      value={newTableColType}
+                      onChange={e => setNewTableColType(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 text-sm font-mono"
+                    >
+                      <option value="TEXT">TEXT</option>
+                      <option value="INTEGER">INTEGER</option>
+                      <option value="REAL">REAL (Decimal)</option>
+                      <option value="BLOB">BLOB</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted/50 rounded-xl border border-border font-mono text-xs text-muted-foreground overflow-x-auto">
+                  <span className="text-brand-500 font-bold">SQL Preview:</span> CREATE TABLE IF NOT EXISTS {newTableName.trim().replace(/[^a-zA-Z0-9_]/g, '') || '[table]'} (id INTEGER PRIMARY KEY AUTOINCREMENT, {newTableColName.trim().replace(/[^a-zA-Z0-9_]/g, '') || 'name'} {newTableColType});
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddTableModalOpen(false)}
+                    className="flex-1 py-2 rounded-xl border border-border hover:bg-muted transition-all font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isExecuting}
+                    className="flex-1 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white transition-all font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    {isExecuting ? 'Creating...' : 'Create Table'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add New Column Modal */}
+      <AnimatePresence>
+        {isAddColumnModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddColumnModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-card border border-border rounded-3xl p-8 w-full max-w-md relative z-[101] shadow-2xl"
+            >
+              <h3 className="text-xl font-bold mb-1">Add New Column</h3>
+              <p className="text-muted-foreground text-sm mb-6">Add a new column to an existing table using `ALTER TABLE`.</p>
+              
+              <form onSubmit={handleAddColumnSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Target Table</label>
+                  <select 
+                    value={targetTable}
+                    onChange={e => setTargetTable(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 text-sm font-mono"
+                  >
+                    <option value="roznamcha">roznamcha (Daily Cash & Ledger)</option>
+                    <option value="kata_transactions">kata_transactions (Customer Transactions)</option>
+                    <option value="kata_summary">kata_summary (Customer Balances)</option>
+                    <option value="stock">stock (Inventory Items)</option>
+                    <option value="customers">customers (Customer Profiles)</option>
+                    <option value="users">users (System Users)</option>
+                    <option value="system_logs">system_logs (System Audit Logs)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">New Column Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. notes, phone2, discount"
+                      value={newColName}
+                      onChange={e => setNewColName(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 font-mono text-sm" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Column Type</label>
+                    <select 
+                      value={newColType}
+                      onChange={e => setNewColType(e.target.value)}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2 focus:outline-none focus:border-brand-500 text-sm font-mono"
+                    >
+                      <option value="TEXT">TEXT</option>
+                      <option value="INTEGER">INTEGER</option>
+                      <option value="REAL">REAL (Decimal)</option>
+                      <option value="BLOB">BLOB</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted/50 rounded-xl border border-border font-mono text-xs text-muted-foreground overflow-x-auto">
+                  <span className="text-brand-500 font-bold">SQL Preview:</span> ALTER TABLE {targetTable} ADD COLUMN {newColName.trim().replace(/[^a-zA-Z0-9_]/g, '') || '[column]'} {newColType};
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddColumnModalOpen(false)}
+                    className="flex-1 py-2 rounded-xl border border-border hover:bg-muted transition-all font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isExecuting}
+                    className="flex-1 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white transition-all font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    {isExecuting ? 'Adding...' : 'Add Column'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset Admin Access Modal */}
+      <AnimatePresence>
+        {isResetAdminModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsResetAdminModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-card border border-border rounded-3xl p-8 w-full max-w-md relative z-[101] shadow-2xl text-center"
+            >
+              <div className="w-16 h-16 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Key size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Reset Admin Access?</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                This will reset the primary administrator account password to default credentials:
+              </p>
+              
+              <div className="bg-muted/50 border border-border rounded-xl p-4 text-left font-mono text-xs space-y-1 mb-6">
+                <div><span className="text-muted-foreground">Username:</span> <span className="font-bold text-foreground">admin</span></div>
+                <div><span className="text-muted-foreground">New Password:</span> <span className="font-bold text-orange-500">NewCode@ShopMIS</span></div>
+                <div><span className="text-muted-foreground">Role:</span> <span className="font-bold text-foreground">admin</span></div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsResetAdminModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border hover:bg-muted transition-all font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleConfirmResetAdmin}
+                  disabled={isExecuting}
+                  className="flex-1 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all font-bold disabled:opacity-50 cursor-pointer"
+                >
+                  {isExecuting ? 'Resetting...' : 'Confirm Reset'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Wipe All Data Modal */}
+      <AnimatePresence>
+        {isWipeDataModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsWipeDataModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-card border border-border rounded-3xl p-8 w-full max-w-md relative z-[101] shadow-2xl text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Wipe All Business Data?</h3>
+              <p className="text-muted-foreground text-sm mb-4 text-left">
+                This will permanently delete all business transactions and records:
+              </p>
+              
+              <ul className="text-left text-xs space-y-1.5 bg-red-500/5 border border-red-500/20 text-red-400 rounded-xl p-4 mb-6 list-disc list-inside">
+                <li>Roznamcha daily ledger entries</li>
+                <li>Kata customer ledgers & transactions</li>
+                <li>Stock inventory and stock movement logs</li>
+                <li>Customer profiles</li>
+                <li>System activity & audit logs</li>
+              </ul>
+              
+              <p className="text-xs text-muted-foreground mb-6 font-medium">
+                Admin accounts, license activation, and system configuration will NOT be deleted.
+              </p>
+
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsWipeDataModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl border border-border hover:bg-muted transition-all font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleConfirmWipeData}
+                  disabled={isExecuting}
+                  className="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-all font-bold disabled:opacity-50 cursor-pointer"
+                >
+                  {isExecuting ? 'Wiping...' : 'Yes, Wipe All Data'}
                 </button>
               </div>
             </motion.div>

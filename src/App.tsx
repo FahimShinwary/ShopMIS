@@ -21,7 +21,7 @@ import CustomerSelect from './components/CustomerSelect';
 import NumericInput from './components/NumericInput';
 import SmartInput from './components/SmartInput';
 import { ShamsiDatePicker } from './components/ShamsiDatePicker';
-import { formatShamsi } from './lib/shamsi';
+import { formatShamsi, getTodayShamsi } from './lib/shamsi';
 import { User as UserType } from './types';
 
 export default function App() {
@@ -102,7 +102,7 @@ function AppContent() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<number | null>(null);
   const [editingEntry, setEditingEntry] = useState<any>(null);
-  const [entryDateValue, setEntryDateValue] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [entryDateValue, setEntryDateValue] = useState<string>(() => getTodayShamsi().gregStr);
   const [modalErrors, setModalErrors] = useState<Record<string, string>>({});
   const [customerModalError, setCustomerModalError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -117,6 +117,11 @@ function AppContent() {
 
   const t = translations[language];
   const isRTL = language === 'ps' || language === 'dr';
+
+  // Automatically clear search query whenever navigating to another menu / tab
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activeTab]);
 
   useEffect(() => {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
@@ -477,7 +482,11 @@ function AppContent() {
   const handleAddEntry = async (data: any) => {
     if (isSubmittingRef.current) return;
 
-    const entryData = { ...data, date: data.date || (editingEntry ? editingEntry.date : new Date().toISOString()) };
+    const entryData = { 
+      ...data, 
+      item_name: data.item_name ? String(data.item_name).trim() : data.item_name,
+      date: data.date || (editingEntry ? editingEntry.date : new Date().toISOString()) 
+    };
     
     // Strict customer validation for roznamcha and kata
     if (activeTab === 'roznamcha' || activeTab === 'kata') {
@@ -557,6 +566,7 @@ function AppContent() {
       }
       setIsModalOpen(false);
       setEditingEntry(null);
+      setEntryDateValue(getTodayShamsi().gregStr);
       setModalErrors({});
       await fetchTabData(activeTab);
       setNotification({ message: t.success_save || 'Saved successfully', type: 'success' });
@@ -614,7 +624,7 @@ function AppContent() {
 
   const handleEditEntry = (entry: any) => {
     setEditingEntry(entry);
-    setEntryDateValue(entry?.date ? entry.date : new Date().toISOString().split('T')[0]);
+    setEntryDateValue(entry?.date ? entry.date : getTodayShamsi().gregStr);
     if (entry.customer_id) {
       setSelectedCustomerId(entry.customer_id);
     } else {
@@ -814,6 +824,8 @@ function AppContent() {
             onAdd={handleAddEntry} 
             onAddClick={() => {
               setEditingEntry(null);
+              setEntryDateValue(getTodayShamsi().gregStr);
+              setSelectedCustomerId(undefined);
               setIsModalOpen(true);
             }}
             onEdit={handleEditEntry}
@@ -940,13 +952,14 @@ function AppContent() {
         setDateFilter={setDateFilter}
         billFilter={billFilter}
         setBillFilter={setBillFilter}
-        onAddEntry={activeTab !== 'dashboard' && activeTab !== 'settings' && activeTab !== 'kata' && activeTab !== 'backup' ? () => {
+        onAddEntry={activeTab !== 'dashboard' && activeTab !== 'settings' && activeTab !== 'backup' ? () => {
           if (activeTab === 'customers') {
             setEditingCustomer(null);
             setIsCustomerModalOpen(true);
           } else {
             setEditingEntry(null);
-            setEntryDateValue(new Date().toISOString().split('T')[0]);
+            setEntryDateValue(getTodayShamsi().gregStr);
+            setSelectedCustomerId(undefined);
             setIsModalOpen(true);
           }
         } : undefined}
@@ -1110,6 +1123,7 @@ function AppContent() {
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingEntry(null);
+                setEntryDateValue(getTodayShamsi().gregStr);
               }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
@@ -1128,6 +1142,7 @@ function AppContent() {
                   onClick={() => {
                     setIsModalOpen(false);
                     setEditingEntry(null);
+                    setEntryDateValue(getTodayShamsi().gregStr);
                   }} 
                   className="text-gray-400 hover:text-white transition-colors"
                 >

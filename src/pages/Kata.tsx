@@ -26,7 +26,7 @@ import { cn } from '../lib/utils';
 import { formatShamsi, isDateInRange } from '../lib/shamsi';
 import Pagination from '../components/Pagination';
 import { KataTransaction, KataSummary, Customer } from '../types';
-import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml } from '../lib/pdfUtils';
+import { openPrintablePDFWindow, exportToPDF, createPaginatedReportHtml, generateMultiCurrencySummaryHtml } from '../lib/pdfUtils';
 
 interface KataProps {
   transactions: KataTransaction[];
@@ -139,47 +139,84 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
 
   const buildKataReportData = () => {
     const isRTL = document.documentElement.dir === 'rtl';
-    const title = selectedCustomer ? `${selectedCustomer.customer_name} (${selectedCustomer.currency || 'AFN'}) - Kata Ledger Report` : 'Kata All Transactions Report';
+    const title = selectedCustomer ? `${selectedCustomer.customer_name} - Kata Ledger Report` : 'Kata All Transactions Report';
     const dateRange = dateFilter.start || dateFilter.end ? ` (${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : 'Start'} to ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : 'End'})` : '';
 
-    const summaryHtml = selectedCustomer ? `
-      <div class="summary-grid">
-        <div class="summary-card">
-          <h3>${t.total_purchase || 'Total Purchase'}</h3>
-          <p>${selectedCustomer.total_purchase.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
-        </div>
-        <div class="summary-card">
-          <h3>${t.total_paid || 'Total Paid'}</h3>
-          <p class="badge-income">${selectedCustomer.total_paid.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
-        </div>
-        <div class="summary-card">
-          <h3>${t.remaining_balance || t.remaining || 'Remaining Balance'}</h3>
-          <p class="${selectedCustomer.remaining_balance > 0 ? 'badge-expense' : 'badge-income'}">${selectedCustomer.remaining_balance.toLocaleString()} ${selectedCustomer.currency || 'AFN'}</p>
-        </div>
-        <div class="summary-card">
-          <h3>${t.total_transactions || 'Total Transactions'}</h3>
-          <p style="color: #0f172a;">${filteredTransactions.length}</p>
-        </div>
+    const currenciesPresent = Array.from(new Set<string>(filteredTransactions.map(tx => (tx.currency as string) || 'AFN'))).filter(Boolean);
+    const activeCurrencies = currenciesPresent.length > 0 ? currenciesPresent : ['AFN'];
+    const preferredOrder = ['AFN', 'USD', 'EUR', 'PKR'];
+    activeCurrencies.sort((a, b) => {
+      const idxA = preferredOrder.indexOf(a);
+      const idxB = preferredOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    const summaryItems = activeCurrencies.map(curr => {
+      const txs = filteredTransactions.filter(tx => (tx.currency || 'AFN') === curr);
+      const purchases = txs
+        .filter(tx => tx.type === 'purchase' || (tx.type as string) === 'debit')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      const paid = txs
+        .filter(tx => tx.type === 'payment' || (tx.type as string) === 'credit')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      const balance = purchases - paid;
+      return {
+        currency: curr,
+        primaryLabel: t.total_purchase || 'Total Purchases',
+        primaryAmount: purchases,
+        primaryColor: '#b91c1c',
+        primaryPrefix: '+',
+        secondaryLabel: t.total_paid || 'Total Paid',
+        secondaryAmount: paid,
+        secondaryColor: '#15803d',
+        secondaryPrefix: '-',
+        balanceLabel: t.remaining_balance || t.remaining || 'Remaining Balance',
+        balanceAmount: balance,
+        balanceColor: balance > 0 ? '#b91c1c' : '#15803d',
+        count: txs.length
+      };
+    });
+
+    const customerHeader = selectedCustomer ? `
+      <div style="margin-bottom: 6px; padding: 6px 12px; border: 1.5px solid #334155; border-radius: 6px; background-color: #f8fafc;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 800; color: #000000;"><span style="unicode-bidi: plaintext;">${t.customer || 'Customer'}: ${selectedCustomer.customer_name}</span></h2>
+        ${customers.find(c => c.id === selectedCustomer.customer_id)?.contact ? `
+          <p style="margin: 2px 0 0 0; font-size: 10px; font-weight: 700; color: #475569;"><span style="unicode-bidi: plaintext;">${t.contact || 'Contact'}: ${customers.find(c => c.id === selectedCustomer.customer_id)?.contact}</span></p>
+        ` : ''}
       </div>
     ` : '';
 
+    const summaryHtml = `
+      ${customerHeader}
+      ${generateMultiCurrencySummaryHtml({
+        currencies: summaryItems,
+        totalRecords: filteredTransactions.length,
+        totalRecordsLabel: t.total_transactions || 'Total Transactions',
+        sectionTitle: activeCurrencies.length > 1 ? (t.account_balances_by_currency || 'Account Balances by Currency') : undefined,
+        isRTL
+      })}
+    `;
+
     const columns = selectedCustomer ? [
       { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
-      { header: t.date || 'Date', style: 'width: 13%; text-align: center;' },
+      { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
       { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
-      { header: t.currency || 'Currency', style: 'width: 7%; text-align: center;' },
+      { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
       { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
-      { header: t.amount || 'Amount', style: 'width: 15%; text-align: end;' },
-      { header: t.description || 'Description', style: 'width: 37%;' }
+      { header: t.amount || 'Amount', style: 'width: 14%; text-align: end;' },
+      { header: t.description || 'Description', style: 'width: 38%;' }
     ] : [
       { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
       { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-      { header: t.customer_name || t.customer || 'Customer', style: 'width: 19%;' },
-      { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
-      { header: t.currency || 'Currency', style: 'width: 6%; text-align: center;' },
-      { header: t.bill_number || 'Bill #', style: 'width: 13%; text-align: center;' },
+      { header: t.customer_name || t.customer || 'Customer', style: 'width: 21%;' },
+      { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
+      { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
+      { header: t.bill_number || 'Bill #', style: 'width: 12%; text-align: center;' },
       { header: t.amount || 'Amount', style: 'width: 13%; text-align: end;' },
-      { header: t.description || 'Description', style: 'width: 24%;' }
+      { header: t.description || 'Description', style: 'width: 20%;' }
     ];
 
     const contentHtml = createPaginatedReportHtml<KataTransaction>({
@@ -190,25 +227,29 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       dateText: `${t.generated_on || 'Generated on'} ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
       records: filteredTransactions,
+      firstPageRecords: activeCurrencies.length > 2 ? 8 : 10,
       isRTL,
       columns,
-      renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => `
+      renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => {
+        const isPurchase = tx.type === 'purchase' || (tx.type as string) === 'debit';
+        return `
         <tr>
           <td style="text-align: center; color: #000000; font-weight: 700;">${globalIndex + 1}</td>
           <td style="text-align: center;">
             <div style="font-weight: 800; color: #000000;">${formatShamsi(tx.date, 'YYYY/MM/DD')}</div>
-            <div style="font-size: 8px; color: #000000; font-weight: 700;">${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
+            <div style="font-size: 8px; color: #475569; font-weight: 700;">${format(new Date(tx.date), 'yyyy-MM-dd')}</div>
           </td>
           ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
-          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: center;">${tx.type === 'purchase' ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-          <td style="text-align: center;"><strong style="color: #000000; font-weight: 800;">${tx.currency || 'AFN'}</strong></td>
+          <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: center; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important; font-weight: 800;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
+          <td style="text-align: center; font-weight: 800; color: #000000;">${tx.currency || 'AFN'}</td>
           <td style="text-align: center;">${tx.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
-          <td class="${tx.type === 'purchase' ? 'badge-expense' : 'badge-income'}" style="text-align: end; font-weight: 800;">
-            ${tx.type === 'purchase' ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
+          <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">
+            ${isPurchase ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
           </td>
           <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${tx.description || '-'}</span></td>
         </tr>
-      `
+      `;
+      }
     });
 
     return {
@@ -240,7 +281,7 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <div><strong>${t.phone || 'Phone'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.contact || '-'}</span></div>
-          <div><strong>${t.type || 'Type'}:</strong> ${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</div>
+          <div><strong>${t.type || 'Type'}:</strong> <span class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</span></div>
         </div>
         <div><strong>${t.address || 'Address'}:</strong> <span style="unicode-bidi:plaintext;">${customer?.address || '-'}</span></div>
       </div>
@@ -257,8 +298,8 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           <tr>
             <td><span style="unicode-bidi:plaintext;">${tx.description || (isPurchase ? (t.purchase || 'Purchase Transaction') : (t.payment || 'Payment Received'))}</span></td>
             <td><strong>${tx.currency || 'AFN'}</strong></td>
-            <td class="text-end ${isPurchase ? 'badge-expense' : 'badge-income'}" style="font-size:14px; font-weight:800;">
-              ${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
+            <td class="text-end ${isPurchase ? 'val-purchase' : 'val-payment'}" style="font-size:14px; font-weight:800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">
+              ${isPurchase ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
             </td>
           </tr>
         </tbody>
@@ -593,6 +634,7 @@ const SummaryCard: React.FC<{ summary: KataSummary, t: any, onClick: () => void,
   const curr = summary.currency || 'AFN';
 
   const totalPurchaseStr = `${summary.total_purchase.toLocaleString()} ${curr}`;
+  const totalPaidStr = `${summary.total_paid.toLocaleString()} ${curr}`;
   const remainingStr = `${Math.abs(summary.remaining_balance).toLocaleString()} ${curr}`;
 
   const getDynamicClass = (str: string) => {
@@ -637,16 +679,23 @@ const SummaryCard: React.FC<{ summary: KataSummary, t: any, onClick: () => void,
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/40">
+      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/40 text-start">
         <div className="space-y-1 min-w-0">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest break-words">{t.total_purchase}</p>
-          <p className={getDynamicClass(totalPurchaseStr)}>{totalPurchaseStr}</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{t.total_purchase}</p>
+          <p className={cn(getDynamicClass(totalPurchaseStr), "text-red-500 font-bold")}>{totalPurchaseStr}</p>
         </div>
         <div className="space-y-1 min-w-0">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest break-words">
-            {isAdvance ? (t.advance_payment || 'Advance Payment') : (t.remaining || 'Remaining Balance')}
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{t.total_paid}</p>
+          <p className={cn(getDynamicClass(totalPaidStr), "text-green-500 font-bold")}>{totalPaidStr}</p>
+        </div>
+        <div className="space-y-1 min-w-0">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
+            {isAdvance ? (t.advance_payment || 'Advance') : isSettled ? (t.settled || 'Settled') : (t.remaining || 'Balance')}
           </p>
-          <p className={cn(getDynamicClass(remainingStr), isAdvance ? "text-green-500" : isSettled ? "text-foreground" : "text-red-500")}>
+          <p className={cn(
+            getDynamicClass(remainingStr),
+            isAdvance ? "text-green-500 font-bold" : isSettled ? "text-foreground font-bold" : "text-red-500 font-bold"
+          )}>
             {remainingStr}
           </p>
         </div>
@@ -684,7 +733,9 @@ function StatCard({ title, value, currency, icon: Icon, color, isBalance, isAdva
       <h4 className={cn(
         "font-black tracking-tighter break-all min-w-0",
         fontSizeClass,
-        isBalance && (isAdvance ? "text-green-500" : value > 0 ? "text-red-500" : "text-green-500")
+        isBalance 
+          ? (isAdvance ? "text-green-500" : value > 0 ? "text-red-500" : "text-green-500")
+          : (color === 'red' ? "text-red-500" : color === 'green' ? "text-green-500" : "text-foreground")
       )}>
         {valStr}
       </h4>
