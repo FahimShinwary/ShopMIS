@@ -127,13 +127,45 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
         e.date.toLowerCase().includes(bf);
 
       return matchesQuery && matchesDate && matchesBill;
-    }).sort((a, b) => b.id - a.id || new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => {
+      return b.id - a.id || new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
   }, [transactions, selectedCustomer, currencyFilter, query, dateFilter, billFilter, customers, t]);
+
+  const transactionsWithRunningBalance = useMemo(() => {
+    if (!selectedCustomer) {
+      return filteredTransactions.map(tx => ({ ...tx, runningBalance: undefined as number | undefined }));
+    }
+
+    // 1. Calculate cumulative balance chronologically (oldest to newest)
+    const chronological = [...filteredTransactions].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id
+    );
+
+    let running = (selectedCustomer as any)?.opening_balance || 0;
+    const withBal = chronological.map(tx => {
+      const isPurchase = tx.type === 'purchase' || (tx.type as string) === 'debit';
+      if (isPurchase) {
+        running += tx.amount;
+      } else {
+        running -= tx.amount;
+      }
+      return {
+        ...tx,
+        runningBalance: running
+      };
+    });
+
+    // 2. Return with new record first and old record second
+    return withBal.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime() || b.id - a.id
+    );
+  }, [filteredTransactions, selectedCustomer]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredTransactions.slice(start, start + itemsPerPage);
-  }, [filteredTransactions, currentPage]);
+    return transactionsWithRunningBalance.slice(start, start + itemsPerPage);
+  }, [transactionsWithRunningBalance, currentPage]);
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
@@ -165,15 +197,15 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       const balance = purchases - paid;
       return {
         currency: curr,
-        primaryLabel: t.total_purchase || 'Total Purchases',
+        primaryLabel: selectedCustomer ? (t.total_debit_dr || 'Total Debit (Dr) (بنام)') : (t.total_purchase || 'Total Purchases'),
         primaryAmount: purchases,
         primaryColor: '#b91c1c',
         primaryPrefix: '+',
-        secondaryLabel: t.total_paid || 'Total Paid',
+        secondaryLabel: selectedCustomer ? (t.total_credit_cr || 'Total Credit (Cr) (جمع)') : (t.total_paid || 'Total Paid'),
         secondaryAmount: paid,
         secondaryColor: '#15803d',
         secondaryPrefix: '-',
-        balanceLabel: t.remaining_balance || t.remaining || 'Remaining Balance',
+        balanceLabel: selectedCustomer ? (t.balance_label || t.balance || 'Balance') : (t.remaining_balance || t.remaining || 'Remaining Balance'),
         balanceAmount: balance,
         balanceColor: balance > 0 ? '#b91c1c' : '#15803d',
         count: txs.length
@@ -201,13 +233,15 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
     `;
 
     const columns = selectedCustomer ? [
-      { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
-      { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-      { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
-      { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
-      { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
-      { header: t.amount || 'Amount', style: 'width: 14%; text-align: end;' },
-      { header: t.description || 'Description', style: 'width: 38%;' }
+      { header: t.record_no || 'No.', style: 'width: 4%; text-align: center;' },
+      { header: t.date || 'Date', style: 'width: 11%; text-align: center;' },
+      { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+      { header: t.currency || 'Currency', style: 'width: 7%; text-align: center;' },
+      { header: t.bill_number || 'Bill #', style: 'width: 10%; text-align: center;' },
+      { header: t.debit_dr || 'Debit (Dr)', style: 'width: 12%; text-align: end;' },
+      { header: t.credit_cr || 'Credit (Cr)', style: 'width: 12%; text-align: end;' },
+      { header: t.balance || 'Balance', style: 'width: 13%; text-align: end;' },
+      { header: t.description || 'Description', style: 'width: 23%;' }
     ] : [
       { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
       { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
@@ -219,19 +253,22 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
       { header: t.description || 'Description', style: 'width: 20%;' }
     ];
 
-    const contentHtml = createPaginatedReportHtml<KataTransaction>({
+    const contentHtml = createPaginatedReportHtml<KataTransaction & { runningBalance?: number }>({
       title,
       subtitle: shopName,
       shopName,
       shopAddress,
       dateText: `${t.generated_on || 'Generated on'} ${formatShamsi(new Date(), 'full')}${dateRange}`,
       summaryHtml,
-      records: filteredTransactions,
+      records: transactionsWithRunningBalance,
       firstPageRecords: activeCurrencies.length > 2 ? 8 : 10,
       isRTL,
       columns,
-      renderRow: (tx: KataTransaction, _idx: number, globalIndex: number) => {
+      renderRow: (tx: KataTransaction & { runningBalance?: number }, _idx: number, globalIndex: number) => {
         const isPurchase = tx.type === 'purchase' || (tx.type as string) === 'debit';
+        const curr = tx.currency || (selectedCustomer ? selectedCustomer.currency : 'AFN') || 'AFN';
+        const bal = tx.runningBalance ?? 0;
+        const balColor = bal > 0 ? '#b91c1c' : (bal < 0 ? '#15803d' : '#0f172a');
         return `
         <tr>
           <td style="text-align: center; color: #000000; font-weight: 700;">${globalIndex + 1}</td>
@@ -241,11 +278,23 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           </td>
           ${!selectedCustomer ? `<td><strong style="unicode-bidi:plaintext; color: #000000; font-weight: 800;">${customers.find(c => c.id === tx.customer_id)?.name || 'Unknown'}</strong></td>` : ''}
           <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: center; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important; font-weight: 800;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
-          <td style="text-align: center; font-weight: 800; color: #000000;">${tx.currency || 'AFN'}</td>
+          <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
           <td style="text-align: center;">${tx.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${tx.bill_number}</span>` : '-'}</td>
-          <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">
-            ${isPurchase ? '+' : '-'}${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}
+          ${selectedCustomer ? `
+          <td class="${isPurchase ? 'val-purchase' : ''}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#64748b'} !important;">
+            ${isPurchase ? `${tx.amount.toLocaleString()} ${curr}` : '0'}
           </td>
+          <td class="${!isPurchase ? 'val-payment' : ''}" style="text-align: end; font-weight: 800; color: ${!isPurchase ? '#15803d' : '#64748b'} !important;">
+            ${!isPurchase ? `${tx.amount.toLocaleString()} ${curr}` : '0'}
+          </td>
+          <td style="text-align: end; font-weight: 800; color: ${balColor} !important;">
+            ${bal.toLocaleString()} ${curr}
+          </td>
+          ` : `
+          <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">
+            ${isPurchase ? '+' : '-'}${tx.amount.toLocaleString()} ${curr}
+          </td>
+          `}
           <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${tx.description || '-'}</span></td>
         </tr>
       `;
@@ -454,21 +503,21 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
           ) : (
             <>
               <StatCard 
-                title={t.total_purchase} 
+                title={t.total_debit_dr || 'Total Debit (Dr) (بنام)'} 
                 value={selectedCustomer.total_purchase}
                 currency={selectedCustomer.currency || 'AFN'} 
                 icon={ArrowUpRight} 
                 color="red" 
               />
               <StatCard 
-                title={t.total_paid} 
+                title={t.total_credit_cr || 'Total Credit (Cr) (جمع)'} 
                 value={selectedCustomer.total_paid} 
                 currency={selectedCustomer.currency || 'AFN'}
                 icon={ArrowDownLeft} 
                 color="green" 
               />
               <StatCard 
-                title={selectedCustomer.remaining_balance < 0 ? (t.advance_payment || 'Advance Payment') : (t.remaining || 'Remaining Balance')} 
+                title={t.balance_label || t.balance || 'Balance'} 
                 value={Math.abs(selectedCustomer.remaining_balance)} 
                 currency={selectedCustomer.currency || 'AFN'}
                 icon={Wallet} 
@@ -513,7 +562,17 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.type}</th>
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.currency || 'Currency'}</th>
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.bill_number}</th>
-                  <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.amount}</th>
+                  {selectedCustomer ? (
+                    <>
+                      <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-end">{t.debit_dr || 'Debit (Dr)'}</th>
+                      <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-end">{t.credit_cr || 'Credit (Cr)'}</th>
+                      <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-end">{t.balance || 'Balance'}</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.amount}</th>
+                    </>
+                  )}
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-start">{t.description}</th>
                   <th className="p-5 text-xs font-black text-muted-foreground uppercase tracking-widest text-end">{t.actions}</th>
                 </tr>
@@ -562,12 +621,35 @@ export default function Kata({ transactions, summaries, customers, t, query, dat
                     <td className="p-5 text-sm font-mono text-muted-foreground">
                       {tx.bill_number || '-'}
                     </td>
-                    <td className={cn(
-                      "p-5 font-black text-sm",
-                      tx.type === 'purchase' ? "text-red-500" : "text-green-500"
-                    )}>
-                      {tx.type === 'purchase' ? '+' : '-'}{tx.amount.toLocaleString()} <span className="text-xs opacity-75">{tx.currency || 'AFN'}</span>
-                    </td>
+                    {selectedCustomer ? (
+                      <>
+                        <td className={cn(
+                          "p-5 font-black text-sm text-end",
+                          tx.type === 'purchase' ? "text-red-500" : "text-muted-foreground/50 font-normal"
+                        )}>
+                          {tx.type === 'purchase' ? `${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}` : '0'}
+                        </td>
+                        <td className={cn(
+                          "p-5 font-black text-sm text-end",
+                          tx.type === 'payment' ? "text-green-500" : "text-muted-foreground/50 font-normal"
+                        )}>
+                          {tx.type === 'payment' ? `${tx.amount.toLocaleString()} ${tx.currency || 'AFN'}` : '0'}
+                        </td>
+                        <td className={cn(
+                          "p-5 font-black text-sm text-end",
+                          (tx.runningBalance ?? 0) > 0 ? "text-red-500" : (tx.runningBalance ?? 0) < 0 ? "text-green-500" : "text-foreground"
+                        )}>
+                          {(tx.runningBalance ?? 0).toLocaleString()} <span className="text-xs opacity-75">{tx.currency || selectedCustomer.currency || 'AFN'}</span>
+                        </td>
+                      </>
+                    ) : (
+                      <td className={cn(
+                        "p-5 font-black text-sm",
+                        tx.type === 'purchase' ? "text-red-500" : "text-green-500"
+                      )}>
+                        {tx.type === 'purchase' ? '+' : '-'}{tx.amount.toLocaleString()} <span className="text-xs opacity-75">{tx.currency || 'AFN'}</span>
+                      </td>
+                    )}
                     <td className="p-5 text-sm text-foreground/70 font-medium">
                       {tx.description || '-'}
                     </td>

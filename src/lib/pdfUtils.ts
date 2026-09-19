@@ -266,6 +266,47 @@ export const getStandardPrintCss = (isRTL: boolean = true, includeFontImport: bo
     overflow: hidden !important;
   }
 
+  .inventory-summary-container {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .inventory-summary-title {
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 0 4px 0 !important;
+    text-align: ${isRTL ? 'right' : 'left'} !important;
+  }
+  .inventory-summary-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #cbd5e1 !important;
+    font-size: 9.5px !important;
+    background: #ffffff !important;
+    margin-bottom: 4px !important;
+  }
+  .inventory-summary-table th {
+    background-color: #f0f4f8 !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 8px !important;
+    text-align: ${isRTL ? 'right' : 'left'} !important;
+  }
+  .inventory-summary-table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 4.5px 8px !important;
+    text-align: ${isRTL ? 'right' : 'left'} !important;
+    color: #0f172a !important;
+    font-weight: 500 !important;
+  }
+  .inventory-summary-table td.col-balance {
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
   td {
     display: table-cell !important;
     color: #000000;
@@ -662,11 +703,13 @@ export function createPaginatedReportHtml<T>(options: PaginatedReportOptions<T>)
 
   const hasSummary = Boolean(summaryHtml && summaryHtml.trim().length > 0);
   const currencyBlocksCount = summaryHtml ? (summaryHtml.match(/class="currency-summary-block"/g) || []).length : 0;
+  const inventorySummaryRows = summaryHtml ? (summaryHtml.match(/class="inventory-summary-row"/g) || []).length : 0;
   
   // Optimized A4 capacities for high readability & quality in print and PDF:
-  // Page 1: 7-8 records (if multiple currency summary blocks present), 10 records (if 1 summary widget present), or 12 records (if no summary widget)
-  // Page 2+: 15 records
-  const defaultFirstPage = hasSummary ? (currencyBlocksCount > 2 ? 7 : (currencyBlocksCount === 2 ? 8 : 10)) : 12;
+  // If inventory summary table is present, adjust firstPage to accommodate table without clipping
+  const defaultFirstPage = hasSummary 
+    ? (inventorySummaryRows > 10 ? 4 : (inventorySummaryRows > 5 ? 6 : (inventorySummaryRows > 0 ? 8 : (currencyBlocksCount > 2 ? 7 : (currencyBlocksCount === 2 ? 8 : 10)))))
+    : 12;
   const firstPageSize = firstPageRecords || (recordsPerPage ? recordsPerPage : defaultFirstPage);
   const subsequentPageSize = subsequentPageRecords || (recordsPerPage ? recordsPerPage : 15);
 

@@ -75,9 +75,13 @@ export default function Reports({
     setCurrentPage(1);
   }, [startDate, endDate, activeReportTab, currencyFilter, searchQuery, selectedCustomerReportId]);
 
-  // Clear search query whenever user switches report tabs
+  // Clear search query and reset date filter for full history when switching to single customer
   React.useEffect(() => {
     setSearchQuery('');
+    if (activeReportTab === 'single_customer') {
+      setStartDate('');
+      setEndDate('');
+    }
   }, [activeReportTab]);
 
   const selectedCustomerObj = useMemo(() => {
@@ -87,10 +91,45 @@ export default function Reports({
 
   const singleCustomerTransactions = useMemo(() => {
     if (!selectedCustomerObj) return [];
-    return kataTransactions
-      .filter(t => t.customer_id === selectedCustomerObj.id)
-      .sort((a, b) => b.id - a.id || new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [kataTransactions, selectedCustomerObj]);
+    let list = kataTransactions.filter(t => t.customer_id === selectedCustomerObj.id);
+    if (startDate || endDate) {
+      list = list.filter(t => isDateInFilter(t.date));
+    }
+    if (currencyFilter !== 'all') {
+      list = list.filter(t => (t.currency || 'AFN') === currencyFilter);
+    }
+    return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id);
+  }, [kataTransactions, selectedCustomerObj, startDate, endDate, currencyFilter]);
+
+  const singleCustomerTransactionsWithBalance = useMemo(() => {
+    // 1. Calculate cumulative balance chronologically (oldest to newest)
+    const chronological = [...singleCustomerTransactions].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id
+    );
+
+    const runningBalances: Record<string, number> = {};
+    const withBal = chronological.map(tx => {
+      const curr = tx.currency || 'AFN';
+      if (runningBalances[curr] === undefined) {
+        runningBalances[curr] = (selectedCustomerObj as any)?.opening_balance || 0;
+      }
+      const isPurchase = (tx.type as string) === 'purchase' || (tx.type as string) === 'debit';
+      if (isPurchase) {
+        runningBalances[curr] += tx.amount;
+      } else {
+        runningBalances[curr] -= tx.amount;
+      }
+      return {
+        ...tx,
+        runningBalance: runningBalances[curr]
+      };
+    });
+
+    // 2. Return with new record first and old record second
+    return withBal.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime() || b.id - a.id
+    );
+  }, [singleCustomerTransactions, selectedCustomerObj]);
 
   const singleCustomerCurrencySummary = useMemo(() => {
     const map: Record<string, { totalPurchase: number; totalPaid: number; remainingBalance: number }> = {
@@ -101,7 +140,11 @@ export default function Reports({
     };
 
     if (selectedCustomerObj) {
-      const custTrans = kataTransactions.filter(t => t.customer_id === selectedCustomerObj.id);
+      const custTrans = kataTransactions.filter(t => {
+        if (t.customer_id !== selectedCustomerObj.id) return false;
+        if (startDate || endDate) return isDateInFilter(t.date);
+        return true;
+      });
       custTrans.forEach(t => {
         const curr = t.currency || 'AFN';
         if (!map[curr]) map[curr] = { totalPurchase: 0, totalPaid: 0, remainingBalance: 0 };
@@ -113,7 +156,7 @@ export default function Reports({
     }
 
     return map;
-  }, [kataTransactions, selectedCustomerObj]);
+  }, [kataTransactions, selectedCustomerObj, startDate, endDate]);
 
   // Quick Preset Handlers
   const handlePreset = (preset: 'today' | 'week' | 'month' | 'year' | 'all') => {
@@ -320,9 +363,9 @@ export default function Reports({
 
   const paginatedSingleCustomer = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return singleCustomerTransactions.slice(start, start + itemsPerPage);
-  }, [singleCustomerTransactions, currentPage]);
-  const totalPagesSingleCustomer = Math.ceil(singleCustomerTransactions.length / itemsPerPage);
+    return singleCustomerTransactionsWithBalance.slice(start, start + itemsPerPage);
+  }, [singleCustomerTransactionsWithBalance, currentPage]);
+  const totalPagesSingleCustomer = Math.ceil(singleCustomerTransactionsWithBalance.length / itemsPerPage);
 
   // Totals grouped by currency
   const totalsByCurrency = useMemo(() => {
@@ -390,6 +433,31 @@ export default function Reports({
       netCashflow
     };
   }, [filteredRoznamcha, filteredKata, filteredStock]);
+
+  const stockInventorySummary = useMemo(() => {
+    const summaryMap = new Map<string, { totalIn: number; totalOut: number; balance: number }>();
+    filteredStock.forEach(entry => {
+      const name = (entry.item_name || '').trim();
+      if (!name) return;
+      if (!summaryMap.has(name)) {
+        summaryMap.set(name, { totalIn: 0, totalOut: 0, balance: 0 });
+      }
+      const stat = summaryMap.get(name)!;
+      if (entry.type === 'in') {
+        stat.totalIn += entry.quantity;
+      } else {
+        stat.totalOut += entry.quantity;
+      }
+      stat.balance = stat.totalIn - stat.totalOut;
+    });
+
+    return Array.from(summaryMap.entries()).map(([name, stats]) => ({
+      name,
+      totalIn: stats.totalIn,
+      totalOut: stats.totalOut,
+      balance: stats.balance
+    }));
+  }, [filteredStock]);
 
   // Build Report HTML Data
   const buildReportHtml = () => {
@@ -534,6 +602,34 @@ export default function Reports({
     };
 
     const buildStockSummaryHtml = () => {
+      const inventoryRowsHtml = stockInventorySummary.map(item => `
+        <tr class="inventory-summary-row">
+          <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; unicode-bidi: plaintext; font-weight: 500; color: #0f172a;">${item.name}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; color: #0f172a;">${item.totalIn.toLocaleString()}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; color: #0f172a;">${item.totalOut.toLocaleString()}</td>
+          <td class="col-balance" style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; font-weight: 800; color: #0f172a;">${item.balance.toLocaleString()}</td>
+        </tr>
+      `).join('');
+
+      const inventoryTableHtml = stockInventorySummary.length > 0 ? `
+        <div class="inventory-summary-container">
+          <h3 class="inventory-summary-title">Inventory Summary</h3>
+          <table class="inventory-summary-table">
+            <thead>
+              <tr>
+                <th style="width: 34%;">Item Name</th>
+                <th style="width: 22%;">Total In</th>
+                <th style="width: 22%;">Total Out</th>
+                <th style="width: 22%;">Current Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inventoryRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      ` : '';
+
       return `
         <div class="summary-grid">
           <div class="summary-card">
@@ -553,6 +649,7 @@ export default function Reports({
             <p style="color: #0f172a;">${filteredStock.length}</p>
           </div>
         </div>
+        ${inventoryTableHtml}
       `;
     };
 
@@ -727,15 +824,15 @@ export default function Reports({
         const balance = purchases - paid;
         return {
           currency: curr,
-          primaryLabel: t.total_purchase || 'Total Purchases',
+          primaryLabel: t.total_debit_dr || 'Total Debit (Dr) (بنام)',
           primaryAmount: purchases,
           primaryColor: '#b91c1c',
           primaryPrefix: '+',
-          secondaryLabel: t.total_paid || 'Total Paid',
+          secondaryLabel: t.total_credit_cr || 'Total Credit (Cr) (جمع)',
           secondaryAmount: paid,
           secondaryColor: '#15803d',
           secondaryPrefix: '-',
-          balanceLabel: t.remaining_balance || 'Remaining Balance',
+          balanceLabel: t.balance_label || t.balance || 'Balance',
           balanceAmount: balance,
           balanceColor: balance > 0 ? '#b91c1c' : '#15803d',
           count: txs.length
@@ -756,27 +853,31 @@ export default function Reports({
         })}
       `;
 
-      contentHtml = createPaginatedReportHtml<KataTransaction>({
+      contentHtml = createPaginatedReportHtml<KataTransaction & { runningBalance?: number }>({
         title: `${t.customer_statement || 'Customer Statement'} - ${selectedCustomerObj.name}`,
         subtitle: shopName,
         shopAddress,
         dateText: `${t.date_range || 'Date Range'}: ${dateRangeLabel}`,
         summaryHtml: customerHeaderSummary,
-        records: singleCustomerTransactions,
+        records: singleCustomerTransactionsWithBalance,
         firstPageRecords: activeCurrencies.length > 2 ? 8 : 10,
         isRTL,
         columns: [
-          { header: t.record_no || 'No.', style: 'width: 5%; text-align: center;' },
-          { header: t.date || 'Date', style: 'width: 12%; text-align: center;' },
-          { header: t.type || 'Type', style: 'width: 9%; text-align: center;' },
-          { header: t.currency || 'Currency', style: 'width: 8%; text-align: center;' },
-          { header: t.amount || 'Amount', style: 'width: 14%; text-align: end;' },
-          { header: t.bill_number || 'Bill #', style: 'width: 14%; text-align: center;' },
-          { header: t.description || 'Description', style: 'width: 38%;' }
+          { header: t.record_no || 'No.', style: 'width: 4%; text-align: center;' },
+          { header: t.date || 'Date', style: 'width: 11%; text-align: center;' },
+          { header: t.type || 'Type', style: 'width: 8%; text-align: center;' },
+          { header: t.currency || 'Currency', style: 'width: 7%; text-align: center;' },
+          { header: t.bill_number || 'Bill #', style: 'width: 10%; text-align: center;' },
+          { header: t.debit_dr || 'Debit (Dr)', style: 'width: 12%; text-align: end;' },
+          { header: t.credit_cr || 'Credit (Cr)', style: 'width: 12%; text-align: end;' },
+          { header: t.balance || 'Balance', style: 'width: 13%; text-align: end;' },
+          { header: t.description || 'Description', style: 'width: 23%;' }
         ],
-        renderRow: (e: KataTransaction, _idx: number, gIdx: number) => {
+        renderRow: (e: KataTransaction & { runningBalance?: number }, _idx: number, gIdx: number) => {
           const isPurchase = (e.type as string) === 'purchase' || (e.type as string) === 'debit';
           const curr = e.currency || 'AFN';
+          const bal = e.runningBalance ?? 0;
+          const balColor = bal > 0 ? '#b91c1c' : (bal < 0 ? '#15803d' : '#0f172a');
           return `
             <tr>
               <td style="text-align: center; color: #000000; font-weight: 700;">${gIdx + 1}</td>
@@ -786,8 +887,12 @@ export default function Reports({
               </td>
               <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: center; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important; font-weight: 800;">${isPurchase ? (t.purchase || 'Purchase') : (t.payment || 'Payment')}</td>
               <td style="text-align: center; font-weight: 800; color: #000000;">${curr}</td>
-              <td class="${isPurchase ? 'val-purchase' : 'val-payment'}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#15803d'} !important;">${isPurchase ? '+' : '-'}${e.amount.toLocaleString()} ${curr}</td>
               <td style="text-align: center;">${e.bill_number ? `<span style="font-weight: 800; color: #000000; unicode-bidi:plaintext;">${e.bill_number}</span>` : '-'}</td>
+              <td class="${isPurchase ? 'val-purchase' : ''}" style="text-align: end; font-weight: 800; color: ${isPurchase ? '#b91c1c' : '#64748b'} !important;">${isPurchase ? `${e.amount.toLocaleString()} ${curr}` : '0'}</td>
+              <td class="${!isPurchase ? 'val-payment' : ''}" style="text-align: end; font-weight: 800; color: ${!isPurchase ? '#15803d' : '#64748b'} !important;">${!isPurchase ? `${e.amount.toLocaleString()} ${curr}` : '0'}</td>
+              <td style="text-align: end; font-weight: 800; color: ${balColor} !important;">
+                ${bal.toLocaleString()} ${curr}
+              </td>
               <td><span style="unicode-bidi:plaintext; color: #000000; font-weight: 700;">${e.description || '-'}</span></td>
             </tr>
           `;
@@ -1425,6 +1530,43 @@ export default function Reports({
         {/* Stock Section */}
         {activeReportTab === 'stock' && (
           <div className="p-6">
+            {/* Inventory Summary Section matching screenshot */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-foreground mb-3">
+                Inventory Summary
+              </h3>
+              <div className="overflow-x-auto border border-border rounded-xl">
+                <table className="w-full text-start border-collapse">
+                  <thead>
+                    <tr className="bg-[#f0f4f8] dark:bg-slate-800 text-foreground border-b border-border">
+                      <th className="p-3 text-start font-bold border border-border">Item Name</th>
+                      <th className="p-3 text-start font-bold border border-border">Total In</th>
+                      <th className="p-3 text-start font-bold border border-border">Total Out</th>
+                      <th className="p-3 text-start font-bold border border-border">Current Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-sm">
+                    {stockInventorySummary.length > 0 ? (
+                      stockInventorySummary.map((item) => (
+                        <tr key={item.name} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3 font-medium text-foreground border border-border unicode-plaintext">{item.name}</td>
+                          <td className="p-3 text-foreground border border-border">{item.totalIn.toLocaleString()}</td>
+                          <td className="p-3 text-foreground border border-border">{item.totalOut.toLocaleString()}</td>
+                          <td className="p-3 font-extrabold text-foreground border border-border">{item.balance.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="p-6 text-center text-muted-foreground border border-border">
+                          {t.no_records_range || 'No inventory records found.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Package size={18} className="text-brand-500" />
@@ -1641,15 +1783,15 @@ export default function Reports({
                           </div>
                           <div className="space-y-1 text-xs font-semibold">
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">{t.total_purchase || 'Purchases'}:</span>
+                              <span className="text-muted-foreground">{t.total_debit_dr || 'Total Debit (Dr) (بنام)'}:</span>
                               <span className="text-red-500 font-bold">{s.totalPurchase.toLocaleString()} {curr}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">{t.total_paid || 'Paid'}:</span>
+                              <span className="text-muted-foreground">{t.total_credit_cr || 'Total Credit (Cr) (جمع)'}:</span>
                               <span className="text-green-500 font-bold">{s.totalPaid.toLocaleString()} {curr}</span>
                             </div>
                             <div className="flex justify-between pt-1 border-t border-border">
-                              <span className="font-bold text-foreground">{t.remaining_balance || 'Balance'}:</span>
+                              <span className="font-bold text-foreground">{t.balance_label || t.balance || 'Balance'}:</span>
                               <span className={cn("font-black", isDeptor ? "text-red-500" : "text-green-500")}>
                                 {s.remainingBalance.toLocaleString()} {curr}
                               </span>
@@ -1672,7 +1814,7 @@ export default function Reports({
                       {singleCustomerTransactions.length} {t.recent_entries || 'records'}
                     </span>
                   </div>
-                  <div className="overflow-x-auto">
+                    <div className="overflow-x-auto">
                     <table className="w-full text-start border-collapse">
                       <thead>
                         <tr className="bg-muted/50 border-b border-border text-xs font-bold text-muted-foreground uppercase">
@@ -1680,8 +1822,10 @@ export default function Reports({
                           <th className="p-3 text-start">{t.date || 'Date'}</th>
                           <th className="p-3 text-start">{t.type || 'Type'}</th>
                           <th className="p-3 text-start">{t.currency || 'Currency'}</th>
-                          <th className="p-3 text-start">{t.amount || 'Amount'}</th>
                           <th className="p-3 text-start">{t.bill_number || 'Bill #'}</th>
+                          <th className="p-3 text-end">{t.debit_dr || 'Debit (Dr)'}</th>
+                          <th className="p-3 text-end">{t.credit_cr || 'Credit (Cr)'}</th>
+                          <th className="p-3 text-end">{t.balance || 'Balance'}</th>
                           <th className="p-3 text-start">{t.description || 'Description'}</th>
                         </tr>
                       </thead>
@@ -1690,6 +1834,7 @@ export default function Reports({
                           paginatedSingleCustomer.map((entry, idx) => {
                             const isPurchase = (entry.type as string) === 'purchase' || (entry.type as string) === 'debit';
                             const rowNum = (currentPage - 1) * itemsPerPage + idx + 1;
+                            const bal = entry.runningBalance ?? 0;
                             return (
                               <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
                                 <td className="p-3 text-muted-foreground font-mono font-bold text-xs">#{rowNum}</td>
@@ -1712,20 +1857,32 @@ export default function Reports({
                                     {entry.currency || 'AFN'}
                                   </span>
                                 </td>
-                                <td className={cn(
-                                  "p-3 font-black",
-                                  isPurchase ? "text-red-500" : "text-green-500"
-                                )}>
-                                  {isPurchase ? '+' : '-'}{entry.amount.toLocaleString()} <span className="text-xs opacity-70">{entry.currency || 'AFN'}</span>
-                                </td>
                                 <td className="p-3 font-mono text-muted-foreground">{entry.bill_number || '-'}</td>
+                                <td className={cn(
+                                  "p-3 text-end font-black",
+                                  isPurchase ? "text-red-500" : "text-muted-foreground/50 font-normal"
+                                )}>
+                                  {isPurchase ? `${entry.amount.toLocaleString()} ${entry.currency || 'AFN'}` : '0'}
+                                </td>
+                                <td className={cn(
+                                  "p-3 text-end font-black",
+                                  !isPurchase ? "text-green-500" : "text-muted-foreground/50 font-normal"
+                                )}>
+                                  {!isPurchase ? `${entry.amount.toLocaleString()} ${entry.currency || 'AFN'}` : '0'}
+                                </td>
+                                <td className={cn(
+                                  "p-3 text-end font-black",
+                                  bal > 0 ? "text-red-500" : bal < 0 ? "text-green-500" : "text-foreground"
+                                )}>
+                                  {bal.toLocaleString()} <span className="text-xs opacity-70">{entry.currency || 'AFN'}</span>
+                                </td>
                                 <td className="p-3 text-foreground/80 font-medium">{entry.description || '-'}</td>
                               </tr>
                             );
                           })
                         ) : (
                           <tr>
-                            <td colSpan={7} className="p-8 text-center text-muted-foreground font-medium">
+                            <td colSpan={9} className="p-8 text-center text-muted-foreground font-medium">
                               {t.no_records_range || 'No transaction records found for this customer.'}
                             </td>
                           </tr>
@@ -1737,7 +1894,7 @@ export default function Reports({
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPagesSingleCustomer}
-                    totalItems={singleCustomerTransactions.length}
+                    totalItems={singleCustomerTransactionsWithBalance.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                     t={t}

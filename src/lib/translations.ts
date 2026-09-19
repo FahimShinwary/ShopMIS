@@ -109,6 +109,11 @@ export const translations = {
     total_purchases_expense: 'Total Roznamcha Purchases',
     total_kata_debit: 'Total Customer Purchases (Credit)',
     total_kata_credit: 'Total Customer Payments (Debt)',
+    total_debit_dr: 'Total Debit (Dr) (بنام)',
+    total_credit_cr: 'Total Credit (Cr) (جمع)',
+    debit_dr: 'Debit (Dr)',
+    credit_cr: 'Credit (Cr)',
+    balance_label: 'Balance',
     export_report: 'Export Report',
     download_pdf: 'Download PDF',
     print_report: 'Print Report',
@@ -165,7 +170,11 @@ export const translations = {
     payment_receipt: 'Payment Receipt',
     stock_in_note: 'Stock In Note',
     stock_out_note: 'Stock Out Note',
-    generated_on: 'Generated on'
+    generated_on: 'Generated on',
+    inventory_summary: 'Inventory Summary',
+    total_in: 'Total In',
+    total_out: 'Total Out',
+    current_balance_col: 'Current Balance'
   },
   ps: {
     dashboard: 'ډشبورډ',
@@ -277,6 +286,11 @@ export const translations = {
     total_purchases_expense: 'ټول پیرودونه (روزنامچه)',
     total_kata_debit: 'ټول پیرودونه (کاتې باقي)',
     total_kata_credit: 'ټولې تادیې (کاتې وصولی)',
+    total_debit_dr: 'ټول ډیبیټ (Dr) (بنام)',
+    total_credit_cr: 'ټول کریډیټ (Cr) (جمع)',
+    debit_dr: 'ډیبیټ (Dr)',
+    credit_cr: 'کریډیټ (Cr)',
+    balance_label: 'بیلانس (Balance)',
     export_report: 'راپور بهر کول',
     download_pdf: 'د پی‌دی‌ایف ډاونلوډ',
     print_report: 'راپور چاپ کول',
@@ -333,7 +347,11 @@ export const translations = {
     payment_receipt: 'د تادیې رسید',
     stock_in_note: 'د سټاک ورودي رسید',
     stock_out_note: 'د سټاک وتلو بل',
-    generated_on: 'جوړ شوی په'
+    generated_on: 'جوړ شوی په',
+    inventory_summary: 'Inventory Summary',
+    total_in: 'Total In',
+    total_out: 'Total Out',
+    current_balance_col: 'Current Balance'
   },
   dr: {
     dashboard: 'داشبورد',
@@ -445,6 +463,11 @@ export const translations = {
     total_purchases_expense: 'مجموع خریدها (روزنامچه)',
     total_kata_debit: 'مجموع خریدها (باقی کاته)',
     total_kata_credit: 'مجموع پرداخت‌ها (رسید کاته)',
+    total_debit_dr: 'مجموعه دیبیت (Dr) (بنام)',
+    total_credit_cr: 'مجموعه کریدیت (Cr) (جمع)',
+    debit_dr: 'دیبیت (Dr)',
+    credit_cr: 'کریدیت (Cr)',
+    balance_label: 'بیلانس (Balance)',
     export_report: 'خروجی گرفتن گزارش',
     download_pdf: 'دانلود PDF',
     print_report: 'چاپ گزارش',
@@ -501,6 +524,10 @@ export const translations = {
     payment_receipt: 'رسید پرداخت',
     stock_in_note: 'رسید ستاک ورودی',
     stock_out_note: 'بل ستاک خروجی',
-    generated_on: 'تهیه شده در'
+    generated_on: 'تهیه شده در',
+    inventory_summary: 'Inventory Summary',
+    total_in: 'Total In',
+    total_out: 'Total Out',
+    current_balance_col: 'Current Balance'
   }
 };

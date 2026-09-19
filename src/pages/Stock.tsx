@@ -145,6 +145,34 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
     const title = 'Stock Inventory Report';
     const dateRange = dateFilter.start || dateFilter.end ? ` (${dateFilter.start ? formatShamsi(dateFilter.start, 'full') : 'Start'} to ${dateFilter.end ? formatShamsi(dateFilter.end, 'full') : 'End'})` : '';
 
+    const inventoryRowsHtml = inventorySummary.map(item => `
+      <tr class="inventory-summary-row">
+        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; unicode-bidi: plaintext; font-weight: 500; color: #0f172a;">${item.name}</td>
+        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; color: #0f172a;">${item.in.toLocaleString()}</td>
+        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; color: #0f172a;">${item.out.toLocaleString()}</td>
+        <td class="col-balance" style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: ${isRTL ? 'right' : 'left'}; font-weight: 800; color: #0f172a;">${item.balance.toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    const inventoryTableHtml = inventorySummary.length > 0 ? `
+      <div class="inventory-summary-container">
+        <h3 class="inventory-summary-title">Inventory Summary</h3>
+        <table class="inventory-summary-table">
+          <thead>
+            <tr>
+              <th style="width: 34%;">Item Name</th>
+              <th style="width: 22%;">Total In</th>
+              <th style="width: 22%;">Total Out</th>
+              <th style="width: 22%;">Current Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inventoryRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    ` : '';
+
     const summaryHtml = `
       <div class="summary-grid">
         <div class="summary-card">
@@ -164,6 +192,7 @@ export default function Stock({ data, t, query, dateFilter, billFilter, shopName
           <p style="color: #0f172a;">${filtered.length}</p>
         </div>
       </div>
+      ${inventoryTableHtml}
     `;
 
     const columns = [
